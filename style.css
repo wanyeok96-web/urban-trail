@@ -2040,7 +2040,7 @@ body.is-tutorial-active { overflow: hidden; }
 #screen-atlas.is-active {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: calc(100dvh - 5.25rem);
 }
 .atlas-page {
   flex: 1 1 auto;
@@ -2048,7 +2048,7 @@ body.is-tutorial-active { overflow: hidden; }
   flex-direction: column;
   min-height: 0;
   padding: 14px clamp(12px, 2vw, 24px) 18px;
-  max-width: 1480px;
+  max-width: none;
   width: 100%;
   margin: 0 auto;
 }
@@ -2062,12 +2062,13 @@ body.is-tutorial-active { overflow: hidden; }
 .atlas-workspace {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(400px, 42vw);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
 }
 .atlas-stage {
-  min-width: 0; min-height: 420px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: min(68vh, 720px);
   background: var(--map-ocean);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -2077,6 +2078,10 @@ body.is-tutorial-active { overflow: hidden; }
 }
 .atlas-map-wrap, .atlas-list-wrap {
   position: absolute; inset: 0;
+}
+.atlas-map-wrap[hidden],
+.atlas-list-wrap[hidden] {
+  display: none !important;
 }
 .atlas-list-wrap {
   overflow: auto;
@@ -2137,71 +2142,34 @@ body.is-tutorial-active { overflow: hidden; }
   box-shadow: var(--shadow-sm);
 }
 
-.atlas-panel {
-  min-width: 0; min-height: 0;
-  background: var(--cream-100);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  overflow: auto;
-  padding: 14px;
-}
-.atlas-empty {
-  height: 100%; min-height: 240px;
-  display: grid; place-items: center;
-  text-align: center; color: var(--ink-500);
-  padding: 24px 12px;
-}
-.atlas-empty .ae-ico { font-size: 2.2rem; display: block; margin-bottom: .4em; }
-.atlas-empty b { color: var(--navy-800); display: block; margin-bottom: .25em; }
-
-.atlas-meta {
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-size: .72rem; color: var(--ink-500); letter-spacing: .04em;
-  margin: 2px 0 8px;
-}
-.atlas-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.atlas-title-row h3 { font-size: 1.2rem; color: var(--navy-800); }
 .atlas-stamp-mark {
   font-size: .7rem; font-weight: 800; letter-spacing: .06em;
   color: #8a6a1f; background: #fdf6e6;
   border: 1px dashed var(--gold-500);
   border-radius: 999px; padding: .15em .55em; white-space: nowrap;
 }
-
-.atlas-panel .city-dash {
-  display: flex;
-  flex-direction: column;
-  height: auto;
+.modal-head .atlas-stamp-mark {
+  vertical-align: middle;
+  margin-left: .4em;
+  color: #fde68a;
+  background: rgba(253, 246, 230, .14);
+  border-color: rgba(253, 216, 53, .45);
+}
+.modal.city .atlas-related {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 16px 8px;
+  background: var(--cream-100);
+  border-bottom: 1px solid var(--cream-300);
+}
+.modal.city .city-dash {
+  flex: 1 1 auto;
   min-height: 0;
-  margin-top: 8px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1.5px solid var(--cream-300);
+  height: auto;
 }
-.atlas-panel .cd-left {
-  max-height: none;
-  overflow: visible;
-}
-.atlas-panel .cd-left .city-visual {
-  min-height: 140px;
-}
-.atlas-panel .cd-left .city-locator-map { min-height: 120px; }
-.atlas-panel .cd-right {
-  overflow: visible;
-  padding: 12px 12px 10px;
-}
-.atlas-panel .cd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.atlas-panel .cd-split { grid-template-columns: 1fr; }
-.atlas-panel .cd-tabs {
-  width: 100%;
-  max-width: 100%;
+.modal.city .cd-tabs {
   flex-wrap: wrap;
   border-radius: 12px;
-}
-.atlas-panel .cd-tab-body {
-  overflow: visible;
-  max-height: none;
-  flex: none;
 }
 
 .gallery {
@@ -2240,6 +2208,7 @@ body.is-tutorial-active { overflow: hidden; }
 }
 .atlas-tab-body { font-size: .88rem; color: var(--ink-700); line-height: 1.7; }
 .atlas-tab-body .info-grid { margin-top: 0; }
+.atlas-q + .atlas-q { margin-top: 12px; }
 .atlas-q.is-done { opacity: .85; }
 .atlas-q .aq { font-weight: 800; color: var(--navy-800); margin-bottom: .45em; }
 .atlas-q .choice { padding: 10px 12px; font-size: .86rem; }
@@ -2506,11 +2475,7 @@ body.is-tutorial-active { overflow: hidden; }
 .tile-stamp { z-index: 2; }
 
 @media (max-width: 960px) {
-  .atlas-workspace { grid-template-columns: 1fr; }
   .atlas-stage { min-height: 52vh; }
-  .atlas-panel {
-    max-height: 48vh;
-  }
 }
 
 /* 설정 리스트 */

@@ -25,7 +25,7 @@
  * [A] 상수 · 권역 · 말 · 색상
  * ========================================================================= */
 
-var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.6.1" };
+var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.7.0" };
 
 /* 저장소 키 */
 var LS = {
@@ -3436,12 +3436,14 @@ function openAtlas(opts) {
   if (opts.cityId) atlas.selected = opts.cityId;
   renderAtlasChrome();
   renderAtlasView();
-  renderAtlasPanel();
   showScreen("screen-atlas", true);
   window.setTimeout(function () {
     bindAtlasMap();
     applyAtlasViewBox();
-    if (opts.cityId) atlasFocusCity(opts.cityId, false);
+    if (opts.cityId) {
+      atlasFocusCity(opts.cityId, false);
+      openAtlasCityModal(getCity(opts.cityId));
+    }
     maybeStartScreenTutorial("atlas");
   }, 40);
 }
@@ -3803,7 +3805,7 @@ function selectAtlasCity(id) {
   Sound.play("click");
   renderAtlasHotspots();
   renderAtlasList();
-  renderAtlasPanel();
+  openAtlasCityModal(c);
 }
 
 function renderAtlasList() {
@@ -3836,8 +3838,8 @@ function renderAtlasList() {
         statLine +
       "</div>";
     item.addEventListener("click", function () {
-      Sound.play("click");
       if (!known) {
+        Sound.play("click");
         toast("아직 발견하지 않은 도시입니다. 게임에서 방문해 보세요!", "bad");
         return;
       }
@@ -3847,56 +3849,68 @@ function renderAtlasList() {
   });
 }
 
-function renderAtlasPanel() {
-  var panel = $("#atlas-panel");
-  if (!panel) return;
-  var c = atlas.selected ? getCity(atlas.selected) : null;
-  if (!c || !cityKnown(c.id)) {
-    panel.innerHTML = "<div class='atlas-empty'><span class='ae-ico'>🌍</span><b>도시를 선택하세요</b>지도의 점을 누르거나 목록에서 고르면<br>도시 학습 대시보드가 여기에 펼쳐집니다.</div>";
-    return;
-  }
+function atlasRelatedHTML(c) {
+  var related = (c.related || []).filter(function (id) { return cityKnown(id); });
+  if (!related.length) return "";
+  return "<div class='atlas-related'><span class='ar-label'>비교 추천</span>" +
+    related.map(function (id) {
+      var rc = getCity(id);
+      return rc ? "<button type='button' class='chip atlas-related-btn' data-city='" + id + "'>" +
+        rc.flag + " " + esc(rc.city) + "</button>" : "";
+    }).join("") + "</div>";
+}
+
+function openAtlasCityModal(c) {
+  if (!c || !cityKnown(c.id)) return;
+  atlas.selected = c.id;
   if (!atlas.tab || atlas.tab === "overview") atlas.tab = "nature";
   var stamped = stampHas(c.id);
-  var related = (c.related || []).filter(function (id) { return cityKnown(id); });
-  var relatedHTML = related.length
-    ? "<div class='atlas-related'><span class='ar-label'>비교 추천</span>" +
-      related.map(function (id) {
-        var rc = getCity(id);
-        return rc ? "<button type='button' class='chip atlas-related-btn' data-city='" + id + "'>" +
-          rc.flag + " " + esc(rc.city) + "</button>" : "";
-      }).join("") +
-      "<button type='button' class='chip atlas-compare-btn'>⚖ 비교하기</button></div>"
-    : "<div class='atlas-related'><button type='button' class='chip atlas-compare-btn'>⚖ 도시 비교</button></div>";
-  panel.innerHTML =
-    "<div class='atlas-title-row'><h3>" + c.flag + " " + esc(c.city) + "</h3>" +
-      (stamped ? "<span class='atlas-stamp-mark'>스탬프 획득</span>" : "") + "</div>" +
-    "<div class='atlas-meta'>" + esc(c.country) + " · " + esc(c.regionName) + " · " + fmtCoord(c) + "</div>" +
-    relatedHTML +
-    cityDashboardHTML(c, {
+  var m = openModal({
+    eyebrow: "CITY DASHBOARD · " + c.country + " · " + c.regionName,
+    title: c.flag + " " + esc(c.city) +
+      (stamped ? " <span class='atlas-stamp-mark'>스탬프 획득</span>" : "") +
+      " <span style='font-weight:600;font-size:.82rem;opacity:.75'>" + esc(c.landmark) + "</span>",
+    body: atlasRelatedHTML(c) + cityDashboardHTML(c, {
       tab: atlas.tab,
       extraTabs: [{ k: "mission", t: "미션" }]
-    });
-
-  mountCityImages(panel);
-  mountCityLocator(panel, c);
-  bindCityDashTabs(panel, c, {
+    }),
+    buttons: [
+      { label: "⚖ 비교하기", cls: "btn-light", act: function () { openCompare([c.id]); } },
+      { label: "닫기", cls: "btn-navy", act: function () { closeModal(); } }
+    ],
+    size: "city",
+    autofocus: false
+  });
+  mountCityImages(m);
+  mountCityLocator(m, c);
+  bindCityDashTabs(m, c, {
     tab: atlas.tab,
     onTab: function (tab) { atlas.tab = tab; }
   });
-
-  $$(".atlas-related-btn", panel).forEach(function (b) {
+  $$(".atlas-related-btn", m).forEach(function (b) {
     b.addEventListener("click", function () {
       openCompare([c.id, b.getAttribute("data-city")]);
     });
   });
-  $$(".atlas-compare-btn", panel).forEach(function (b) {
-    b.addEventListener("click", function () { openCompare([c.id]); });
-  });
+  return m;
+}
+
+function renderAtlasPanel() {
+  var c = atlas.selected ? getCity(atlas.selected) : null;
+  if (!c || !cityKnown(c.id) || !modalOpen) return;
+  var root = document.querySelector("#modal-root .modal.city");
+  var body = root && root.querySelector("#cd-tab-body");
+  if (body && atlas.tab === "mission") {
+    body.innerHTML = cityDashTabHTML(c, "mission");
+    bindAtlasMission(root, c);
+    return;
+  }
+  openAtlasCityModal(c);
 }
 
 function grantAtlasStamp(c) {
   if (stampHas(c.id)) {
-    renderAtlasPanel();
+    openAtlasCityModal(c);
     renderCoverStats();
     renderHeroMap();
     return;
@@ -3908,7 +3922,7 @@ function grantAtlasStamp(c) {
   confetti(36);
   toast(c.city + " 랜드마크 스탬프!", "good");
   if (game) addLog("🗺️ 트레일 맵 · " + esc(c.city) + " 스탬프 획득", "good");
-  renderAtlasPanel();
+  openAtlasCityModal(c);
   renderCoverStats();
   if (game) {
     refreshBoardMarks();
@@ -4624,7 +4638,7 @@ var ATLAS_TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='atlas-map']",
     title: "세계 지도",
-    body: "점을 누르면 오른쪽에 도시 학습 대시보드가 열립니다. 확대·이동하며 위치를 확인해 보세요."
+    body: "점을 누르면 도시 학습 대시보드가 큰 창으로 열립니다. 확대·이동하며 위치를 확인해 보세요."
   },
   {
     target: "[data-tutorial='atlas-search']",
@@ -4634,12 +4648,7 @@ var ATLAS_TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='atlas-view']",
     title: "지도 / 목록",
-    body: "지도 보기와 카드 목록 보기를 바꿀 수 있습니다. 도시 비교도 여기서 시작합니다."
-  },
-  {
-    target: "[data-tutorial='atlas-panel']",
-    title: "도시 학습 대시보드",
-    body: "선택한 도시의 <b>도시 학습 대시보드</b>가 여기에 열립니다. 자연·인문·이야기 탭과 미션은 어반 런과 같습니다."
+    body: "지도 보기와 카드 목록 보기를 바꿀 수 있습니다. 어느 쪽이든 도시를 누르면 대시보드가 창으로 열립니다. 도시 비교도 여기서 시작합니다."
   },
   {
     target: null,
