@@ -10,7 +10,7 @@
    04. 게임 설정 화면
    05. 게임 화면 - 보드 / 중앙 세계지도 / 말
    06. 게임 화면 - 사이드 패널(트레일 로그)
-   07. 모달 (도시 카드 / 퀴즈 / 특별 칸)
+   07. 모달 (도시 학습 대시보드 / 퀴즈 / 특별 칸)
    08. 트레일 맵 / 선생님 설정 / 게임 방법
    09. 결과 리포트
    10. 반응형 (태블릿 / 모바일)
@@ -1568,6 +1568,52 @@ body.is-tutorial-active { overflow: hidden; }
 }
 .modal.city .modal-foot { padding: 10px 16px; }
 .modal.narrow { width: min(460px, 100%); }
+.modal.sheet {
+  width: min(840px, 100%);
+  max-height: min(92vh, 960px);
+}
+.modal-back.is-nested {
+  z-index: 830;
+  background: rgba(6, 12, 24, .55);
+}
+
+.guide-modal-nav {
+  display: flex;
+  gap: 6px;
+  padding: 3px;
+  background: var(--cream-200);
+  border-radius: 999px;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.guide-tab {
+  font-size: .84rem;
+  font-weight: 800;
+  padding: .42em 1.05em;
+  border-radius: 999px;
+  color: var(--ink-500);
+  background: transparent;
+  cursor: pointer;
+}
+.guide-tab.is-on {
+  background: var(--navy-700);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.modal.sheet .guide-pane .panel {
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+.modal.sheet #office-sheet .panel {
+  box-shadow: var(--shadow-sm);
+}
+.modal.sheet #office-sheet .setup-nav {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
 
 .modal-head {
   padding: 14px 18px;
@@ -1593,7 +1639,7 @@ body.is-tutorial-active { overflow: hidden; }
   background: #fff; flex: 0 0 auto;
 }
 
-/* --- 도시 카드 --- */
+/* --- 도시 학습 대시보드 --- */
 .city-visual {
   position: relative;
   border-radius: var(--radius);
@@ -1705,25 +1751,22 @@ body.is-tutorial-active { overflow: hidden; }
 }
 .cd-left .city-visual {
   aspect-ratio: 4 / 3;
-  min-height: 148px;
+  min-height: 168px;
   flex: 0 0 auto;
 }
-.cd-id { color: #fff; padding: 0 2px; }
-.cd-city { font-size: 1.28rem; font-weight: 900; letter-spacing: -.02em; line-height: 1.25; }
-.cd-country { font-size: .82rem; opacity: .78; font-weight: 700; margin-top: 3px; }
-.cd-land {
-  display: inline-flex; align-items: center; gap: .35em;
-  margin-top: 8px; padding: .28em .75em;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.28);
-  background: rgba(255,255,255,.1);
-  font-size: .8rem; font-weight: 700;
-  line-height: 1.35;
+.cd-left .cv-flag,
+.cd-left .cv-region,
+.cd-left .cv-city,
+.cd-left .cv-country { display: none; }
+.cd-left .city-visual.has-image .cv-fallback {
+  text-align: left;
+  padding: 22px 12px 10px;
 }
-.cd-left .city-locator { margin: 0; border-color: rgba(255,255,255,.16); }
+.cd-left .cv-landmark { margin-top: 0; }
+.cd-left .city-locator { margin: 0; border-color: rgba(255,255,255,.16); flex: 1 1 auto; display: flex; flex-direction: column; }
 .cd-left .cl-title { color: rgba(255,255,255,.82); }
 .cd-left .cl-coord { color: rgba(255,255,255,.62); }
-.cd-left .city-locator-map { min-height: 128px; }
+.cd-left .city-locator-map { min-height: 160px; flex: 1 1 auto; }
 .cd-left .kw-row { margin-top: 0; }
 .cd-left .chip {
   background: rgba(255,255,255,.12);
@@ -2020,7 +2063,7 @@ body.is-tutorial-active { overflow: hidden; }
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) min(360px, 36vw);
+  grid-template-columns: minmax(0, 1fr) minmax(400px, 42vw);
   gap: 12px;
 }
 .atlas-stage {
@@ -2123,6 +2166,42 @@ body.is-tutorial-active { overflow: hidden; }
   color: #8a6a1f; background: #fdf6e6;
   border: 1px dashed var(--gold-500);
   border-radius: 999px; padding: .15em .55em; white-space: nowrap;
+}
+
+.atlas-panel .city-dash {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  margin-top: 8px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1.5px solid var(--cream-300);
+}
+.atlas-panel .cd-left {
+  max-height: none;
+  overflow: visible;
+}
+.atlas-panel .cd-left .city-visual {
+  min-height: 140px;
+}
+.atlas-panel .cd-left .city-locator-map { min-height: 120px; }
+.atlas-panel .cd-right {
+  overflow: visible;
+  padding: 12px 12px 10px;
+}
+.atlas-panel .cd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.atlas-panel .cd-split { grid-template-columns: 1fr; }
+.atlas-panel .cd-tabs {
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: wrap;
+  border-radius: 12px;
+}
+.atlas-panel .cd-tab-body {
+  overflow: visible;
+  max-height: none;
+  flex: none;
 }
 
 .gallery {
@@ -2368,7 +2447,35 @@ body.is-tutorial-active { overflow: hidden; }
   gap: 10px;
   margin-top: 18px;
 }
-#screen-office .setup-nav { justify-content: flex-start; }
+.office-sfx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-top: 4px;
+}
+.office-sfx .switch-label { color: var(--navy-800); font-weight: 800; }
+.office-sfx-vol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.office-sfx-vol > label {
+  font-size: .86rem;
+  font-weight: 700;
+  color: var(--ink-700);
+  flex: 0 0 auto;
+}
+.office-sfx-vol .slider.on-light { width: min(240px, 100%); flex: 1 1 120px; }
+#vol-sfx-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: var(--navy-800);
+  min-width: 3.2em;
+}
+#office-sheet .setup-nav { justify-content: flex-start; }
 
 .codex-thumb { position: relative; overflow: hidden; }
 .codex-thumb img {
@@ -2518,6 +2625,18 @@ body.is-tutorial-active { overflow: hidden; }
 .stamp-book {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(122px, 1fr)); gap: 11px;
 }
+.stamp-region { margin-bottom: 16px; }
+.stamp-region:last-child { margin-bottom: 0; }
+.stamp-region-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: .84rem; font-weight: 800; color: var(--navy-800);
+  margin: 0 0 8px;
+  padding: 2px 0 4px 10px;
+  border-left: 4px solid var(--c, var(--navy-500));
+}
+.stamp-region-h .sr-n {
+  color: var(--ink-500); font-weight: 700; font-variant-numeric: tabular-nums; font-size: .78rem;
+}
 .stamp-page {
   border: 2px dashed color-mix(in srgb, var(--c, #888) 55%, #fff);
   background: color-mix(in srgb, var(--c, #888) 8%, #fff);
@@ -2546,6 +2665,7 @@ body.is-tutorial-active { overflow: hidden; }
 .reflect-list { display: flex; flex-direction: column; gap: 16px; }
 .reflect-q .rq { font-weight: 800; color: var(--navy-800); margin-bottom: .4em; font-size: .95rem; }
 .reflect-q .rq span { color: var(--gold-500); }
+.print-answer { display: none; }
 
 .pick-fav { display: flex; flex-wrap: wrap; gap: 8px; }
 .fav-btn {
@@ -2751,49 +2871,130 @@ body.is-tutorial-active { overflow: hidden; }
 @media print {
   @page { size: A4; margin: 12mm; }
   html, body, #app { min-height: 0; height: auto; background: #fff; }
+  body { orphans: 3; widows: 3; }
+  .screen { display: none !important; animation: none !important; }
+  .screen.is-active { display: block !important; }
   .site-header, .site-footer, .site-route-strip,
   .no-print, .game-top-actions, .report-actions, .report-submit, .report-more,
   #toast-root, .modal-back, .tutorial-root, .teacher-only-block { display: none !important; }
-  #screen-teacher-guide.is-active .page-head,
-  #screen-student-guide.is-active .page-head { display: none; }
-  #screen-teacher-guide.is-active .teacher-guide,
-  #screen-student-guide.is-active .teacher-guide { box-shadow: none; }
+  body.is-print-guide .screen { display: none !important; }
+  body.is-print-guide #sheet-park {
+    display: block !important;
+    position: static !important;
+  }
+  body.is-print-guide #guide-sheet,
+  body.is-print-guide #guide-pane-teacher {
+    display: block !important;
+  }
+  body.is-print-guide #guide-pane-student,
+  body.is-print-guide .guide-modal-nav,
+  body.is-print-guide .guide-actions,
+  body.is-print-guide #office-sheet { display: none !important; }
+  body.is-print-guide #guide-pane-teacher .teacher-guide { box-shadow: none; background: transparent; padding: 0; }
+  body.is-print-guide .sec-title,
+  body.is-print-guide h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  body.is-print-guide .howto-step,
+  body.is-print-guide .note-box,
+  body.is-print-guide .table-scroll,
+  body.is-print-guide table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   .print-only { display: block; }
   .print-fav { margin: 6px 0 8px; font-size: 10.5pt; font-weight: 700; color: #1e3a5f; }
   .page { padding: 0; max-width: none; }
   .report-doc {
     box-shadow: none;
     border-radius: 0;
+    overflow: visible;
     font-size: 10pt;
-    line-height: 1.4;
+    line-height: 1.45;
   }
   .report-top {
     background: var(--navy-800) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    break-after: avoid;
     page-break-after: avoid;
-    padding: 16px 18px;
+    padding: 14px 16px;
   }
   .report-top h2 { font-size: 16pt; margin: 4px 0 6px; }
   .report-body { padding: 8px 0 0; }
-  .score-grid { page-break-inside: avoid; gap: 6px; }
+  .score-grid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-before: avoid;
+    page-break-before: avoid;
+    gap: 6px;
+  }
   .score-box { padding: 8px 10px; }
   .score-box .sv { font-size: 1.2rem; }
-  .goal-list, .region-report, .reflect-list { page-break-inside: avoid; }
-  .sec-title { font-size: 11pt; margin: 12px 0 6px; }
+  .print-section.is-keep,
+  .goal-list,
+  .region-report {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sec-title {
+    font-size: 11pt;
+    margin: 12px 0 6px;
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .stamp-region {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 10px;
+  }
+  .stamp-region-h {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
   .stamp-book {
     grid-template-columns: repeat(6, 1fr);
     gap: 5px;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .stamp-page {
+    padding: 5px 4px;
+    min-height: 0;
+    break-inside: avoid;
     page-break-inside: avoid;
   }
-  .stamp-page { padding: 5px 4px; min-height: 0; }
   .stamp-page .sp-l { display: none; }
-  .reflect-list .textarea {
-    min-height: 2.4em;
-    border: 1px solid #ccc;
-    box-shadow: none;
-    font-size: 10pt;
+  .rr-row { break-inside: avoid; page-break-inside: avoid; }
+  .reflect-list {
+    break-inside: auto;
+    page-break-inside: auto;
+    gap: 12px;
   }
+  .reflect-q {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .reflect-q textarea { display: none !important; }
+  .print-answer {
+    display: block;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-height: 2.2em;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: #1e293b;
+  }
+  .print-answer.is-empty { color: #64748b; font-style: italic; }
   .stamp-page, .score-box, .rr-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .page-head { display: none; }
+  .compare-table thead { display: table-header-group; }
+  .compare-table tr { break-inside: avoid; page-break-inside: avoid; }
 }
