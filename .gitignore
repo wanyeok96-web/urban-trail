@@ -4,3 +4,6 @@ Desktop.ini
 *.log
 .vscode/
 .idea/
+
+# 랜드마크 이미지 수집용 임시 원본 (assets/landmarks 의 PNG만 배포에 필요)
+tools/_dl/

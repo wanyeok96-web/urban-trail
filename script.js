@@ -25,7 +25,7 @@
  * [A] 상수 · 권역 · 말 · 색상
  * ========================================================================= */
 
-var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.1.1" };
+var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.4.0" };
 
 /* 저장소 키 */
 var LS = {
@@ -37,7 +37,9 @@ var LS = {
   stamps:   "cityPassport.stamps.v1",
   profile:  "cityPassport.profile.v1",
   atlasQuiz:"cityPassport.atlasQuiz.v1",
-  tutorial: "cityPassport.tutorial.v1"
+  tutorial: "cityPassport.tutorial.v1",
+  tutorials:"cityPassport.tutorials.v1",
+  user:     "cityPassport.user.v1"
 };
 
 /* 6개 권역 (색상은 style.css의 --r-* 와 동일) */
@@ -622,7 +624,8 @@ var NAV_SCREEN_MAP = {
   "screen-compare": "atlas",
   "screen-passport": "passport",
   "screen-setup": "play",
-  "screen-game": "play"
+  "screen-game": "play",
+  "screen-office": "home"
 };
 
 function updateSiteNav(screenId) {
@@ -643,7 +646,10 @@ function showScreen(id, remember) {
   var next = document.getElementById(id);
   if (next) next.classList.add("is-active");
   updateSiteNav(id);
-  if (tutorialActive && id !== "screen-title") closeTutorial(false);
+  if (tutorialActive) {
+    var need = { home: "screen-title", atlas: "screen-atlas", play: "screen-game", passport: "screen-passport" }[tutorialKind];
+    if (need && id !== need) closeTutorial(false);
+  }
   try { window.scrollTo(0, 0); } catch (e) {}
 }
 function backScreen(fallback) {
@@ -667,6 +673,11 @@ function toast(msg, kind, ms) {
  *  opts : { title, eyebrow, body(HTML), buttons:[{label,cls,act}], size, closable, onClose }
  *  반환값 : 모달 DOM (버튼 핸들러에서 closeModal() 호출) */
 var modalOpen = false;
+function dismissModal(opts) {
+  closeModal();
+  if (opts && opts.onClose) opts.onClose();
+  else if (busy && game && !game.finished) endTurn();
+}
 function openModal(opts) {
   closeModal(true);
   var back = el("div", "modal-back");
@@ -676,12 +687,10 @@ function openModal(opts) {
   head.innerHTML =
     "<div><div class='eyebrow'>" + esc(opts.eyebrow || APP.name) + "</div>" +
     "<h3>" + (opts.title || "") + "</h3></div>";
-  if (opts.closable !== false) {
-    var x = el("button", "modal-x", "✕");
-    x.setAttribute("aria-label", "닫기");
-    x.addEventListener("click", function () { Sound.play("click"); closeModal(); if (opts.onClose) opts.onClose(); });
-    head.appendChild(x);
-  }
+  var x = el("button", "modal-x", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", function () { Sound.play("click"); dismissModal(opts); });
+  head.appendChild(x);
   m.appendChild(head);
 
   var body = el("div", "modal-body");
@@ -700,11 +709,9 @@ function openModal(opts) {
   }
 
   back.appendChild(m);
-  if (opts.closable !== false) {
-    back.addEventListener("mousedown", function (e) {
-      if (e.target === back) { closeModal(); if (opts.onClose) opts.onClose(); }
-    });
-  }
+  back.addEventListener("mousedown", function (e) {
+    if (e.target === back) dismissModal(opts);
+  });
   $("#modal-root").appendChild(back);
   modalOpen = true;
   window.setTimeout(function () {
@@ -725,6 +732,7 @@ function confirmDialog(title, message, onYes, yesLabel) {
   openModal({
     title: title, eyebrow: "확인", size: "narrow",
     body: "<p style='font-size:.93rem;line-height:1.7;color:var(--ink-700)'>" + message + "</p>",
+    onClose: function () {},
     buttons: [
       { label: "취소", cls: "btn-light", act: function () { closeModal(); } },
       { label: yesLabel || "확인", cls: "btn-navy", act: function () { closeModal(); onYes(); } }
@@ -769,13 +777,21 @@ function regionOf(key) {
 function regionName(key) { return regionOf(key).name; }
 function regionColor(key) { return regionOf(key).color; }
 
+function landmarkSrc(c) {
+  if (!c) return "";
+  return encodeURI("assets/landmarks/" + c.city + "-" + c.landmark + ".png");
+}
+function cityFallbackSrc(c) {
+  return c ? "assets/cities/" + c.id + ".jpg" : "";
+}
+
 /* 초기화 : 도시별 지도 좌표(x, y) 계산 — 설계서의 coordinates {x, y} 값 */
 CITIES.forEach(function (c) {
   c.coordinates.x = Math.round(projX(c.coordinates.lon) * 10) / 10;
   c.coordinates.y = Math.round(projY(c.coordinates.lat) * 10) / 10;
   c.continentColor = regionColor(c.region);
   c.regionName = regionName(c.region);
-  c.image = "assets/cities/" + c.id + ".jpg";
+  c.image = landmarkSrc(c);
 });
 
 /* 목표 카드 · 비교 · 정렬 — data.js stats 우선, 없으면 문장에서 추출 */
@@ -910,7 +926,7 @@ function climographSVG(c) {
   return html;
 }
 
-function cityClimateHTML(c) {
+function cityClimateHTML(c, compact) {
   var m = monthClimate(c);
   if (!m.t || !m.r) return "";
   var st = m.st;
@@ -920,10 +936,21 @@ function cityClimateHTML(c) {
   var rainSum = m.r.reduce(function (a, b) { return a + b; }, 0);
   var tMin = Math.min.apply(null, m.t);
   var tMax = Math.max.apply(null, m.t);
+  var zoneBit = zone ? " · 쾨펜 " + esc(zone) + (zoneKo ? " (" + esc(zoneKo) + ")" : "") : "";
+  if (compact) {
+    return "<div class='climate-block compact'>" +
+      "<div class='cb-head'>기후 그래프 · 1~12월" + zoneBit + "</div>" +
+      climographSVG(c) +
+      "<div class='cg-legend'>" +
+        "<span class='cg-leg rain'>막대 강수량</span>" +
+        "<span class='cg-leg temp'>선 기온</span>" +
+      "</div>" +
+      "<div class='cb-sum'>" +
+        "최저기온 " + tMin + "°C · 최고기온 " + tMax + "°C · 연강수 " + rainSum + " mm" +
+      "</div></div>";
+  }
   return "<div class='climate-block'>" +
-    "<div class='cb-head'>기후 그래프 · 1~12월" +
-      (zone ? " · 쾨펜 " + esc(zone) + (zoneKo ? " (" + zoneKo + ")" : "") : "") +
-    "</div>" +
+    "<div class='cb-head'>기후 그래프 · 1~12월" + zoneBit + "</div>" +
     "<div class='cb-city'>" + esc(c.city) + "</div>" +
     climographSVG(c) +
     "<div class='cg-legend'>" +
@@ -1023,6 +1050,19 @@ function groupLabel(g) {
 var DEFAULT_PROFILE = { bestScore: 0, bestStamps: 0, bestRegions: 0, playCount: 0, gamesFinished: 0 };
 function getProfile() { return Object.assign({}, DEFAULT_PROFILE, Store.get(LS.profile, {})); }
 function saveProfile(p) { Store.set(LS.profile, p); }
+
+var DEFAULT_USER = { role: "student", school: "", grade: "", klass: "", name: "" };
+function getUser() { return Object.assign({}, DEFAULT_USER, Store.get(LS.user, {})); }
+function saveUser(u) { Store.set(LS.user, u); }
+function userKlassLabel() {
+  var u = getUser();
+  var parts = [];
+  if (u.grade) parts.push(u.grade + "학년");
+  if (u.klass) parts.push(u.klass + "반");
+  var g = parts.join(" ");
+  if (u.school && g) return u.school + " " + g;
+  return g || u.school || "";
+}
 function updateProfileFromGame() {
   if (!game) return;
   var p = getProfile();
@@ -1047,14 +1087,17 @@ function isExternalSrc(src) {
 }
 function cityImageList(c) {
   var list = [];
-  if (c.images && c.images.length) {
+  if (c) {
+    list.push({ src: landmarkSrc(c), caption: c.landmark, credit: "" });
+    list.push({ src: cityFallbackSrc(c), caption: c.landmark, credit: "" });
+  }
+  if (c && c.images && c.images.length) {
     c.images.forEach(function (im) {
       if (!im) return;
       if (typeof im === "string") list.push({ src: im, caption: c.landmark, credit: "" });
       else if (im.src) list.push({ src: im.src, caption: im.caption || c.landmark, credit: im.credit || "" });
     });
   }
-  list.push({ src: "assets/cities/" + c.id + ".jpg", caption: c.landmark, credit: "" });
   var seen = {};
   return list.filter(function (im) {
     if (!im.src || seen[im.src]) return false;
@@ -1177,6 +1220,7 @@ function renderBoard() {
       node = el("div", "tile tile-city");
       node.style.setProperty("--c", c.continentColor);
       node.innerHTML =
+        "<img class='tile-photo' alt='' src='" + landmarkSrc(c) + "'>" +
         "<span class='tile-band'></span>" +
         "<span class='tile-flag'>" + c.flag + "</span>" +
         "<span class='tile-name'>" + esc(c.city) + "</span>" +
@@ -1202,6 +1246,10 @@ function renderBoard() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); peekTile(i); }
     });
     board.appendChild(node);
+    var photo = node.querySelector(".tile-photo");
+    if (photo) {
+      photo.addEventListener("error", function () { if (photo.parentNode) photo.parentNode.removeChild(photo); });
+    }
     tileEls.push(node);
   });
 
@@ -1521,9 +1569,10 @@ function renderStampStrip() {
   }
   game.stamped.forEach(function (id) {
     var c = getCity(id);
-    var s = el("div", "mini-stamp", c.landmarkIcon);
+    var s = el("div", "mini-stamp");
     s.style.setProperty("--c", c.continentColor);
     s.title = c.city + " · " + c.landmark;
+    s.innerHTML = "<img alt='' src='" + landmarkSrc(c) + "'>";
     wrap.appendChild(s);
   });
 }
@@ -1551,20 +1600,72 @@ function addScore(n, key) {
  * [I] 턴 진행 : 주사위 · 이동 · 칸 이벤트
  * ========================================================================= */
 
-/* 주사위 눈 그리기 */
+/* 주사위 눈 그리기 — CSS 3D 큐브 */
 var PIP_MAP = {
   1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
 };
-function drawDice(n) {
-  var d = $("#dice");
-  d.innerHTML = "";
+var DICE_FACE_ROT = {
+  1: { x: 0, y: 0 },
+  2: { x: 0, y: -90 },
+  3: { x: -90, y: 0 },
+  4: { x: 90, y: 0 },
+  5: { x: 0, y: 90 },
+  6: { x: 0, y: 180 }
+};
+var diceSpin = { x: 0, y: 0 };
+
+function pipFaceHTML(n) {
   var cells = PIP_MAP[n] || PIP_MAP[1];
+  var html = "";
   for (var i = 0; i < 9; i++) {
-    var cell = el("span", "");
-    if (cells.indexOf(i) !== -1) cell.className = "pip";
-    d.appendChild(cell);
+    html += "<span" + (cells.indexOf(i) !== -1 ? " class='pip'" : "") + "></span>";
+  }
+  return html;
+}
+
+function ensureDiceCube() {
+  var d = $("#dice");
+  if (!d) return null;
+  if (!d.querySelector(".dice-face")) {
+    d.className = "dice-cube";
+    d.innerHTML =
+      "<div class='dice-face f1'>" + pipFaceHTML(1) + "</div>" +
+      "<div class='dice-face f2'>" + pipFaceHTML(2) + "</div>" +
+      "<div class='dice-face f3'>" + pipFaceHTML(3) + "</div>" +
+      "<div class='dice-face f4'>" + pipFaceHTML(4) + "</div>" +
+      "<div class='dice-face f5'>" + pipFaceHTML(5) + "</div>" +
+      "<div class='dice-face f6'>" + pipFaceHTML(6) + "</div>";
+  }
+  return d;
+}
+
+function drawDice(n, opts) {
+  opts = opts || {};
+  var d = ensureDiceCube();
+  if (!d) return;
+  n = Math.max(1, Math.min(6, n | 0));
+  var face = DICE_FACE_ROT[n] || DICE_FACE_ROT[1];
+  if (!opts.instant) {
+    diceSpin.x += 360 * (1 + Math.floor(Math.random() * 2));
+    diceSpin.y += 360 * (2 + Math.floor(Math.random() * 3));
+  }
+  var rot = "rotateX(" + (diceSpin.x + face.x) + "deg) rotateY(" + (diceSpin.y + face.y) + "deg)";
+  if (opts.instant) {
+    d.style.transition = "none";
+    d.style.transform = rot;
+    void d.offsetWidth;
+    d.style.transition = "";
+  } else {
+    d.style.transform = rot;
   }
   d.setAttribute("aria-label", "주사위 " + n);
+}
+
+function setDiceMsg(text, isResult) {
+  var msg = $("#dice-msg");
+  if (!msg) return;
+  msg.textContent = text;
+  msg.classList.toggle("is-result", !!isResult);
 }
 
 function setRollEnabled(on) {
@@ -1579,27 +1680,37 @@ async function rollDice() {
   Sound.unlock();
   Sound.play("dice");
 
-  var d = $("#dice");
-  d.classList.add("is-rolling");
-  $("#dice-msg").textContent = "주사위를 굴리는 중...";
+  var d = ensureDiceCube();
+  var toss = $("#dice-toss");
+  if (toss) {
+    toss.classList.remove("is-land");
+    toss.classList.add("is-rolling");
+  }
+  setDiceMsg("주사위를 굴리는 중...");
 
-  /* 굴리는 동안 눈이 바뀌는 연출 */
-  var spins = settings.animSpeed === "fast" ? 6 : (settings.animSpeed === "slow" ? 14 : 10);
+  var spins = settings.animSpeed === "fast" ? 7 : (settings.animSpeed === "slow" ? 14 : 10);
+  var step = settings.animSpeed === "fast" ? 55 : (settings.animSpeed === "slow" ? 90 : 70);
+  if (d) d.style.transition = "transform " + Math.max(70, step - 10) + "ms linear";
   for (var i = 0; i < spins; i++) {
     drawDice(1 + Math.floor(Math.random() * 6));
-    await sleep(settings.animSpeed === "fast" ? 45 : 70);
+    await sleep(step);
   }
   var value = 1 + Math.floor(Math.random() * 6);
+  if (d) d.style.transition = "transform .9s cubic-bezier(.18, .7, .22, 1.18)";
   drawDice(value);
-  d.classList.remove("is-rolling");
+  if (toss) {
+    toss.classList.remove("is-rolling");
+    toss.classList.add("is-land");
+  }
 
   var who = isSoloGame()
     ? travelerName()
     : (game.group.members[game.memberIdx % game.group.members.length] || "친구");
-  $("#dice-msg").textContent = who + " · " + value + "칸 이동!";
+  setDiceMsg(who + " · " + value + "칸 이동!", true);
   addLog("<b>" + esc(who) + "</b> 주사위 " + value);
 
-  await sleep(220);
+  await sleep(420);
+  if (toss) toss.classList.remove("is-land");
   await movePawn(value);
 }
 
@@ -1666,6 +1777,7 @@ function nextTurnLabel() {
 }
 function endTurn() {
   closeModal();
+  if (!game || game.finished || !busy) return;
   game.turn++;
   if (!isSoloGame()) game.memberIdx++;
   updateTurnUI();
@@ -1678,17 +1790,17 @@ function endTurn() {
   if (game.turn >= game.turnLimit) {
     busy = true;
     setRollEnabled(false);
-    $("#dice-msg").textContent = "제한 턴을 모두 사용했습니다.";
+    setDiceMsg("제한 턴을 모두 사용했습니다.");
     window.setTimeout(function () { finishGame(); }, 700);
     return;
   }
   busy = false;
   setRollEnabled(true);
   if (isSoloGame()) {
-    $("#dice-msg").textContent = "주사위를 굴려 다음 도시로 이동하세요.";
+    setDiceMsg("주사위를 굴려 다음 도시로 이동하세요.");
   } else {
     var who = game.group.members[game.memberIdx % game.group.members.length] || "친구";
-    $("#dice-msg").textContent = who + "님, 주사위를 굴려 주세요!";
+    setDiceMsg(who + "님, 주사위를 굴려 주세요!");
     toast("다음 차례 · " + who, "", 2200);
   }
 }
@@ -1742,43 +1854,116 @@ function mountCityImages(root) {
   });
 }
 
-function cityInfoHTML(c) {
-  var items = [
-    { k: "📍 위치와 지형", v: c.geography },
-    { k: "🌡️ 기후", v: c.climate },
-    { k: "👥 인구 규모", v: c.populationScale + " — " + c.populationNote },
-    { k: "🏭 산업", v: c.industry },
-    { k: "🏙️ 도시 기능", v: c.urbanFunction },
-    { k: "🎎 문화", v: c.culture },
-    { k: "📈 성장 배경", v: c.growthReason }
-  ];
-  var html = cityLocatorHTML(c);
-  html += cityClimateHTML(c);
-  html += "<div class='info-grid'>";
-  items.forEach(function (it) {
-    html += "<div class='info-item' style='--c:" + c.continentColor + "'>" +
-            "<div class='k'>" + it.k + "</div><div class='v'>" + esc(it.v) + "</div></div>";
-  });
-  html += "</div>";
-  html += "<div class='fact-box'><b>💡 알아 두면 재미있는 사실</b><br>" + esc(c.interestingFact) + "</div>";
-  if (c.geoNote) {
-    html += "<div class='fact-box geo-note'><b>🗺️ 지리로 한 걸음 더</b><br>" + esc(c.geoNote) + "</div>";
-  }
-  if (c.countryFact) {
-    html += "<div class='fact-box country-fact'><b>🌍 이 나라가 궁금하다면</b><br>" + esc(c.countryFact) + "</div>";
-  }
-  html += "<div class='kw-row'>";
-  html += "<span class='chip chip-region' style='--c:" + c.continentColor + "'>" + esc(c.regionName) + "</span>";
-  c.keywords.forEach(function (k) { html += "<span class='chip'>#" + esc(k) + "</span>"; });
-  html += "</div>";
-  return html;
+function infoItem(c, k, v) {
+  return "<div class='info-item' style='--c:" + c.continentColor + "'><div class='k'>" + k + "</div><div class='v'>" + esc(v) + "</div></div>";
 }
 
-/* 도시 카드 모달
+function cityRoleLabel(c) {
+  if (c.functions && c.functions.length) return c.functions[0];
+  if (c.keywords && c.keywords.length) return c.keywords[0];
+  return "도시";
+}
+
+function cityClimateZoneLabel(c) {
+  var st = cityStats(c) || {};
+  var zone = st.climateZone || "";
+  if (!zone) return "—";
+  var ko = KOEPPEN_KO[zone];
+  return ko ? ko : zone;
+}
+
+function cityDashTabHTML(c, tab) {
+  var st = cityStats(c) || {};
+  var south = c.coordinates && c.coordinates.lat < 0;
+  if (tab === "human") {
+    return "<div class='info-grid'>" +
+      infoItem(c, "🏭 산업", c.industry) +
+      infoItem(c, "🏙️ 도시 기능", c.urbanFunction) +
+      infoItem(c, "🎎 문화", c.culture) +
+      infoItem(c, "📈 성장 배경", c.growthReason) +
+      "</div>";
+  }
+  if (tab === "story") {
+    var extra = "";
+    extra += "<div class='fact-box'><b>💡 알아 두면 재미있는 사실</b><br>" + esc(c.interestingFact) + "</div>";
+    if (c.geoNote) extra += "<div class='fact-box geo-note'><b>🗺️ 지리로 한 걸음 더</b><br>" + esc(c.geoNote) + "</div>";
+    if (c.countryFact) extra += "<div class='fact-box country-fact'><b>🌍 이 나라가 궁금하다면</b><br>" + esc(c.countryFact) + "</div>";
+    extra += "<div class='info-grid'>" + infoItem(c, "👥 인구 규모", c.populationScale + " — " + c.populationNote) + "</div>";
+    return extra;
+  }
+  var zone = st.climateZone || "";
+  var zoneKo = KOEPPEN_KO[zone] || "";
+  return "<div class='info-grid'>" +
+    infoItem(c, "📍 위치와 지형", c.geography) +
+    infoItem(c, "🌡️ 기후", c.climate) +
+    (zone ? infoItem(c, "🌐 쾨펜 기후", zone + (zoneKo ? " · " + zoneKo : "")) : "") +
+    "</div>" +
+    "<p class='cb-note' style='margin-top:10px'>" + (south
+      ? "남반구 도시라 1월이 한여름, 7월이 한겨울에 가깝습니다."
+      : "북반구 도시라 1월이 한겨울, 7월이 한여름에 가깝습니다.") +
+    "</p>";
+}
+
+function cityDashboardHTML(c) {
+  var st = cityStats(c) || {};
+  var chips = "<span class='chip chip-region' style='--c:" + c.continentColor + "'>" + esc(c.regionName) + "</span>";
+  (c.keywords || []).forEach(function (k) { chips += "<span class='chip'>#" + esc(k) + "</span>"; });
+  var climate = cityClimateHTML(c, true) ||
+    "<div class='climate-block compact'><div class='cb-head'>기후</div><p class='cb-note'>" + esc(c.climate) + "</p></div>";
+  return "" +
+    "<div class='city-dash' style='--c:" + c.continentColor + "'>" +
+      "<aside class='cd-left'>" +
+        cityVisualHTML(c) +
+        "<div class='cd-id'>" +
+          "<div class='cd-city'>" + c.flag + " " + esc(c.city) + "</div>" +
+          "<div class='cd-country'>" + esc(c.country) + " · " + esc(c.regionName) + "</div>" +
+          "<span class='cd-land'>" + c.landmarkIcon + " " + esc(c.landmark) + "</span>" +
+        "</div>" +
+        cityLocatorHTML(c) +
+        "<div class='kw-row'>" + chips + "</div>" +
+      "</aside>" +
+      "<div class='cd-right'>" +
+        "<div class='cd-kpis'>" +
+          "<div class='cd-kpi'><span class='k'>인구</span><span class='v'>" + fmtPop(st.population) + "</span></div>" +
+          "<div class='cd-kpi'><span class='k'>해발</span><span class='v'>" + (st.elevation != null ? st.elevation + " m" : "—") + "</span></div>" +
+          "<div class='cd-kpi'><span class='k'>기후대</span><span class='v'>" + esc(cityClimateZoneLabel(c)) + "</span></div>" +
+          "<div class='cd-kpi'><span class='k'>도시 기능</span><span class='v'>" + esc(cityRoleLabel(c)) + "</span></div>" +
+        "</div>" +
+        "<div class='cd-split'>" +
+          climate +
+          "<div class='cd-geo'><div class='k'>📍 위치와 지형</div><div class='v'>" + esc(c.geography) + "</div></div>" +
+        "</div>" +
+        "<div class='cd-tabs' role='tablist'>" +
+          "<button type='button' class='cd-tab is-on' data-tab='nature' role='tab' aria-selected='true'>자연</button>" +
+          "<button type='button' class='cd-tab' data-tab='human' role='tab' aria-selected='false'>인문</button>" +
+          "<button type='button' class='cd-tab' data-tab='story' role='tab' aria-selected='false'>이야기</button>" +
+        "</div>" +
+        "<div class='cd-tab-body' id='cd-tab-body'>" + cityDashTabHTML(c, "nature") + "</div>" +
+      "</div>" +
+    "</div>";
+}
+
+function bindCityDashTabs(root, c) {
+  var body = root.querySelector("#cd-tab-body");
+  if (!body) return;
+  $$(".cd-tab", root).forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var tab = btn.getAttribute("data-tab");
+      $$(".cd-tab", root).forEach(function (b) {
+        var on = b === btn;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      Sound.play("click");
+      body.innerHTML = cityDashTabHTML(c, tab);
+    });
+  });
+}
+
+/* 도시 학습 대시보드 모달
  *  opts.preview = true 면 정보만 보여주고 미션은 진행하지 않는다. */
 function openCityModal(c, opts) {
   opts = opts || {};
-  var body = cityVisualHTML(c) + cityInfoHTML(c);
   var buttons;
 
   if (opts.preview) {
@@ -1792,15 +1977,15 @@ function openCityModal(c, opts) {
   }
 
   var m = openModal({
-    eyebrow: c.country + " · " + c.regionName,
+    eyebrow: "CITY DASHBOARD · " + c.country + " · " + c.regionName,
     title: c.flag + " " + esc(c.city) + " <span style='font-weight:600;font-size:.82rem;opacity:.75'>" + esc(c.landmark) + "</span>",
-    body: body,
+    body: cityDashboardHTML(c),
     buttons: buttons,
-    closable: opts.preview !== false ? true : false,
-    size: ""
+    size: "city"
   });
   mountCityImages(m);
   mountCityLocator(m, c);
+  bindCityDashTabs(m, c);
   return m;
 }
 
@@ -1829,7 +2014,6 @@ function openQuiz(c) {
     eyebrow: "MISSION",
     title: "🎯 랜드마크 미션",
     body: render(),
-    closable: false,
     buttons: []
   });
 
@@ -1981,8 +2165,7 @@ function spStart(sp) {
   Sound.play("reward");
   addLog("🛫 출발 칸 정지 · 마일리지 <b>+" + PTS.landStart + "</b>", "gold");
   openModal({
-    eyebrow: "START", title: "🛫 국제공항", size: "narrow", closable: false,
-    body: specialHeroHTML(sp, "출발 칸에 정확히 도착했습니다! 넉넉한 여행 마일리지를 받습니다.") +
+    eyebrow: "START", title: "🛫 국제공항", size: "narrow",     body: specialHeroHTML(sp, "출발 칸에 정확히 도착했습니다! 넉넉한 여행 마일리지를 받습니다.") +
           "<div class='reward-line'>여행 마일리지 <span class='pt'>+" + PTS.landStart + "</span></div>",
     buttons: [{ label: nextTurnLabel(), cls: "btn-navy", act: endTurn }]
   });
@@ -1996,8 +2179,7 @@ function spChance(sp) {
   addLog(card.emoji + " 여행 찬스 · " + esc(card.t) + " " + (card.p >= 0 ? "+" : "") + card.p,
          card.p >= 0 ? "good" : "bad");
   openModal({
-    eyebrow: "CHANCE", title: "🎁 여행 찬스", size: "narrow", closable: false,
-    body: "<div class='special-hero'><div class='special-emoji'>" + card.emoji + "</div>" +
+    eyebrow: "CHANCE", title: "🎁 여행 찬스", size: "narrow",     body: "<div class='special-hero'><div class='special-emoji'>" + card.emoji + "</div>" +
           "<div class='special-name'>" + esc(card.t) + "</div>" +
           "<div class='special-desc'>" + esc(card.d) + "</div></div>" +
           "<div class='reward-line'" + (card.p < 0 ? " style='background:var(--bad-soft);border-color:var(--bad);color:#7d2b29'" : "") + ">" +
@@ -2016,7 +2198,7 @@ function spFestival(sp) {
   if (game.festivals.indexOf(card.t) === -1) game.festivals.push(card.t);
   addLog(card.emoji + " 세계 축제 · " + esc(card.t) + " +" + pts, "gold");
   openModal({
-    eyebrow: "FESTIVAL", title: "🎉 세계 축제", closable: false, size: "narrow",
+    eyebrow: "FESTIVAL", title: "🎉 세계 축제",  size: "narrow",
     body: "<div class='special-hero'><div class='special-emoji'>" + card.emoji + "</div>" +
           "<div class='special-name'>" + esc(card.t) + "</div>" +
           "<div class='special-desc'>" + esc(card.city) + "</div></div>" +
@@ -2040,8 +2222,7 @@ function spTransfer(sp) {
     addScore(20);
     addLog("🛄 환승 라운지 · 모든 도시를 이미 방문했습니다 +20", "gold");
     openModal({
-      eyebrow: "TRANSFER", title: "🛄 환승 라운지", size: "narrow", closable: false,
-      body: specialHeroHTML(sp, "보드 위의 모든 도시에서 스탬프를 받았습니다! 라운지에서 편히 쉬어 갑니다.") +
+      eyebrow: "TRANSFER", title: "🛄 환승 라운지", size: "narrow",       body: specialHeroHTML(sp, "보드 위의 모든 도시에서 스탬프를 받았습니다! 라운지에서 편히 쉬어 갑니다.") +
             "<div class='reward-line'>여행 점수 <span class='pt'>+20</span></div>",
       buttons: [{ label: nextTurnLabel(), cls: "btn-navy", act: endTurn }]
     });
@@ -2050,8 +2231,7 @@ function spTransfer(sp) {
 
   var html = specialHeroHTML(sp) + "<div class='pick-list' id='transfer-list'></div>";
   var m = openModal({
-    eyebrow: "TRANSFER", title: "🛄 환승 라운지", closable: false,
-    body: html,
+    eyebrow: "TRANSFER", title: "🛄 환승 라운지",     body: html,
     buttons: [{ label: "환승하지 않기 (+10점)", cls: "btn-light", act: function () {
       addScore(10);
       addLog("🛄 환승하지 않고 휴식 +10");
@@ -2096,7 +2276,7 @@ function spIssue(sp) {
     "<div class='quiz-q' style='margin-top:14px;font-size:.98rem'>우리 팀이 도시 계획가라면 어떤 방법을 고르겠습니까?</div>" +
     "<div class='choices' id='issue-choices'></div><div id='issue-feedback'></div>";
 
-  var m = openModal({ eyebrow: "URBAN ISSUE", title: "🏗️ 도시 문제 해결", body: body, closable: false, buttons: [] });
+  var m = openModal({ eyebrow: "URBAN ISSUE", title: "🏗️ 도시 문제 해결", body: body,  buttons: [] });
 
   var wrap = $("#issue-choices", m);
   choices.forEach(function (text, i) {
@@ -2131,8 +2311,7 @@ function spPhoto(sp) {
     addScore(10);
     addLog("📸 여행 사진관 · 아직 찍을 사진이 없어요 +10");
     openModal({
-      eyebrow: "PHOTO", title: "📸 여행 사진관", size: "narrow", closable: false,
-      body: specialHeroHTML(sp, "아직 방문한 도시가 없어 카메라만 점검했습니다. 다음 도시를 기대해 볼까요?") +
+      eyebrow: "PHOTO", title: "📸 여행 사진관", size: "narrow",       body: specialHeroHTML(sp, "아직 방문한 도시가 없어 카메라만 점검했습니다. 다음 도시를 기대해 볼까요?") +
             "<div class='reward-line'>여행 점수 <span class='pt'>+10</span></div>",
       buttons: [{ label: nextTurnLabel(), cls: "btn-navy", act: endTurn }]
     });
@@ -2140,7 +2319,7 @@ function spPhoto(sp) {
   }
 
   var body = specialHeroHTML(sp) + "<div class='pick-list' id='photo-list'></div>";
-  var m = openModal({ eyebrow: "PHOTO", title: "📸 여행 사진관", body: body, closable: false, buttons: [] });
+  var m = openModal({ eyebrow: "PHOTO", title: "📸 여행 사진관", body: body,  buttons: [] });
   var list = $("#photo-list", m);
   visited.slice(-8).reverse().forEach(function (c) {
     var b = el("button", "pick-item");
@@ -2155,8 +2334,7 @@ function spPhoto(sp) {
       addLog("📸 " + c.flag + " <b>" + esc(c.city) + "</b> 베스트 컷 +" + pts, "gold");
       closeModal();
       openModal({
-        eyebrow: "PHOTO", title: "📸 베스트 컷 완성", closable: false,
-        body: cityVisualHTML(c) +
+        eyebrow: "PHOTO", title: "📸 베스트 컷 완성",         body: cityVisualHTML(c) +
               "<div class='quiz-result good' style='margin-top:14px'><span class='rt'>" +
               esc(c.city) + "에서의 사진이 여권에 실렸습니다!</span>" + esc(c.interestingFact) + "</div>" +
               "<div class='reward-line'>여행 점수 <span class='pt'>+" + pts + "</span></div>",
@@ -2178,7 +2356,7 @@ function spGeoQuiz(sp) {
   var body = specialHeroHTML(sp) +
     "<div class='quiz-q' style='margin-top:12px'>" + esc(qsrc.q) + "</div>" +
     "<div class='choices' id='geo-choices'></div><div id='geo-feedback'></div>";
-  var m = openModal({ eyebrow: "GEO QUIZ", title: "🧠 세계지리 퀴즈", body: body, closable: false, buttons: [] });
+  var m = openModal({ eyebrow: "GEO QUIZ", title: "🧠 세계지리 퀴즈", body: body,  buttons: [] });
 
   var wrap = $("#geo-choices", m);
   choices.forEach(function (text, i) {
@@ -2220,7 +2398,7 @@ function spJournal(sp) {
     "<span class='hint'>작성한 내용은 결과 리포트의 여행 일지에 그대로 실립니다.</span></div>";
 
   var m = openModal({
-    eyebrow: "JOURNAL", title: "📔 휴식과 기록", closable: false, body: body,
+    eyebrow: "JOURNAL", title: "📔 휴식과 기록",  body: body,
     buttons: [
       { label: "건너뛰기 (+5)", cls: "btn-light", act: function () { addScore(5); addLog("📔 휴식 +5"); endTurn(); } },
       { label: "기록 남기기 (+15)", cls: "btn-gold", act: function () {
@@ -2268,7 +2446,7 @@ function confirmLeaveGame(onYes, message) {
 
 function confirmSaveQuit(onYes) {
   confirmDialog("저장 후 나가기",
-    "지금까지의 여행을 저장하고 홈으로 나갈까요?<br>나중에 <b>이어하기</b>로 다시 시작할 수 있어요.",
+    "지금까지의 여행을 저장하고 홈으로 나갈까요?<br>나중에 <b>어반 런</b>을 누르면 이어서 할 수 있어요.",
     onYes, "저장하고 나가기");
 }
 function finishGame() {
@@ -2693,7 +2871,7 @@ function newSetupDraft() {
     step: 1,
     playMode: "team",
     mode: settings.defaultMode,
-    klass: last ? last.klass : "",
+    klass: last ? last.klass : userKlassLabel(),
     name: "",
     members: ["", ""],
     tokenId: TOKENS[0].id,
@@ -2794,21 +2972,12 @@ function gotoSetupStep(n) {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
-function renderSetupModeSummary() {
-  var box = $("#setup-mode-summary");
-  if (!box || !setupDraft) return;
-  var mode = MODES.filter(function (m) { return m.key === setupDraft.mode; })[0] || MODES[1];
-  box.innerHTML =
-    "<span class='sms-emoji' aria-hidden='true'>" + mode.emoji + "</span>" +
-    "<div><div class='sms-name'>" + esc(mode.name) + "</div>" +
-    "<div class='sms-meta'>🎲 " + mode.turns + "턴 · ⏱️ " + esc(mode.time) + "</div></div>";
-}
-
 function renderModeGrid() {
   var wrap = $("#mode-grid");
   wrap.innerHTML = "";
   MODES.forEach(function (m) {
     var b = el("button", "mode-card" + (m.key === setupDraft.mode ? " is-on" : ""));
+    b.setAttribute("aria-pressed", m.key === setupDraft.mode ? "true" : "false");
     b.innerHTML =
       "<div class='mode-emoji'>" + m.emoji + "</div>" +
       "<div class='mode-name'>" + esc(m.name) + "</div>" +
@@ -2818,11 +2987,9 @@ function renderModeGrid() {
       setupDraft.mode = m.key;
       Sound.unlock(); Sound.play("click");
       renderModeGrid();
-      renderSetupModeSummary();
     });
     wrap.appendChild(b);
   });
-  renderSetupModeSummary();
 }
 
 function renderMemberInputs() {
@@ -3000,11 +3167,12 @@ function enterGameScreen() {
   renderBoard();
   renderWorldMap();
   renderSidePanel();
-  drawDice(1);
+  drawDice(1, { instant: true });
   busy = false;
   setRollEnabled(!game.finished);
   window.setTimeout(updateBoardScale, 60);
   window.setTimeout(function () { movePawnTo(game.pos, true); }, 200);
+  window.setTimeout(function () { maybeStartScreenTutorial("play"); }, 500);
 }
 
 /* 이어하기 버튼 활성/비활성 */
@@ -3146,6 +3314,7 @@ function openAtlas(opts) {
     bindAtlasMap();
     applyAtlasViewBox();
     if (opts.cityId) atlasFocusCity(opts.cityId, false);
+    maybeStartScreenTutorial("atlas");
   }, 40);
 }
 function openCodex() { openAtlas({ view: "list" }); }
@@ -3529,8 +3698,9 @@ function renderAtlasList() {
       : "";
     item.innerHTML =
       "<div class='codex-thumb' style='--c:" + c.continentColor + "'>" +
+        (known ? "<img alt='' src='" + landmarkSrc(c) + "'>" : "") +
         "<span class='cflag'>" + (known ? c.flag : "❔") + "</span>" +
-        (known ? c.landmarkIcon : "") +
+        (known ? "" : "❔") +
       "</div>" +
       "<div class='codex-meta'>" +
         "<div class='cn'>" + (known ? esc(c.city) : "???") + (stamped ? " ✹" : "") + "</div>" +
@@ -3702,9 +3872,6 @@ function atlasTabBody(c) {
     infoItem(c, "👥 인구 규모", c.populationScale + " — " + c.populationNote) +
     infoItem(c, "📌 좌표", fmtCoord(c)) +
     "</div>";
-}
-function infoItem(c, k, v) {
-  return "<div class='info-item' style='--c:" + c.continentColor + "'><div class='k'>" + k + "</div><div class='v'>" + esc(v) + "</div></div>";
 }
 
 function renderAtlasPanel() {
@@ -3923,12 +4090,23 @@ function openPassport() {
     var known = cityKnown(c.id);
     var cls = "passport-cell" + (stamped ? " is-stamp" : (found ? " is-found" : "")) + (known ? "" : " is-locked");
     html += "<button type='button' class='" + cls + "' style='--c:" + c.continentColor + "' data-city='" + c.id + "'>" +
-      "<div class='pc-i'>" + (known ? c.landmarkIcon : "❔") + "</div>" +
+      "<div class='pc-node'>" +
+        (known
+          ? "<img class='pc-photo' alt='' src='" + landmarkSrc(c) + "'>"
+          : "<span class='pc-fallback'>❔</span>") +
+        (stamped ? "<img class='pc-stamp-mark' alt='스탬프' src='assets/brand/beaver-scholar.png'>" : "") +
+      "</div>" +
       "<div class='pc-n'>" + (known ? esc(c.city) : "???") + "</div>" +
       "<div class='pc-c'>" + (stamped ? "스탬프" : (found ? "발견" : esc(c.regionName))) + "</div></button>";
   });
   html += "</div>";
   body.innerHTML = html;
+  $$(".pc-photo", body).forEach(function (img) {
+    img.addEventListener("error", function () {
+      var fb = el("span", "pc-fallback", "🏙️");
+      if (img.parentNode) img.parentNode.replaceChild(fb, img);
+    });
+  });
   $$("[data-city]", body).forEach(function (b) {
     b.addEventListener("click", function () {
       Sound.play("click");
@@ -3938,6 +4116,119 @@ function openPassport() {
     });
   });
   showScreen("screen-passport", true);
+  maybeStartScreenTutorial("passport");
+}
+
+/* ---------------------------- 관리실 ---------------------------- */
+function openOffice() {
+  renderOffice();
+  showScreen("screen-office", true);
+}
+function officeReadForm() {
+  return {
+    role: (getUser().role === "teacher" ? "teacher" : "student"),
+    school: ($("#office-school") && $("#office-school").value || "").trim(),
+    name: ($("#office-name") && $("#office-name").value || "").trim(),
+    grade: ($("#office-grade") && $("#office-grade").value || "").trim(),
+    klass: ($("#office-class") && $("#office-class").value || "").trim()
+  };
+}
+function renderOfficeRoleSeg() {
+  var wrap = $("#office-role-seg");
+  if (!wrap) return;
+  var u = getUser();
+  wrap.innerHTML = "";
+  [{ t: "학생", v: "student" }, { t: "교사", v: "teacher" }].forEach(function (o) {
+    var b = el("button", u.role === o.v ? "is-on" : "", o.t);
+    b.addEventListener("click", function () {
+      var cur = officeReadForm();
+      cur.role = o.v;
+      saveUser(cur);
+      Sound.play("click");
+      renderOffice();
+    });
+    wrap.appendChild(b);
+  });
+}
+function renderOffice() {
+  var u = getUser();
+  if ($("#office-school")) $("#office-school").value = u.school || "";
+  if ($("#office-name")) $("#office-name").value = u.name || "";
+  if ($("#office-grade")) $("#office-grade").value = u.grade || "";
+  if ($("#office-class")) $("#office-class").value = u.klass || "";
+  renderOfficeRoleSeg();
+  var tools = $("#office-teacher-tools");
+  if (tools) tools.hidden = u.role !== "teacher";
+  var st = collectStats();
+  var p = getProfile();
+  var saved = loadGame();
+  var box = $("#office-stats");
+  if (box) {
+    box.innerHTML =
+      "<div class='profile-stat'><div class='pk'>발견 도시</div><div class='pv'>" + st.found + "<small> / " + st.total + "</small></div></div>" +
+      "<div class='profile-stat'><div class='pk'>스탬프</div><div class='pv'>" + st.stamps + "<small> / " + st.total + "</small></div></div>" +
+      "<div class='profile-stat'><div class='pk'>완주 횟수</div><div class='pv'>" + p.gamesFinished + "</div></div>" +
+      "<div class='profile-stat'><div class='pk'>진행 중 게임</div><div class='pv'>" + (saved && !saved.finished ? "있음" : "없음") + "</div></div>";
+  }
+}
+function saveOfficeForm() {
+  var u = officeReadForm();
+  saveUser(u);
+  toast("이용자 정보를 이 기기에 저장했습니다.", "good");
+  renderOffice();
+}
+function exportLearningBundle() {
+  var payload = {
+    app: APP.name,
+    version: APP.version,
+    exportedAt: nowStr(),
+    user: getUser(),
+    profile: getProfile(),
+    stamps: stampSet,
+    discovered: codexSet,
+    results: Store.get(LS.results, []),
+    save: loadGame()
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "URBAN_TRAIL_학습기록.json";
+  document.body.appendChild(a);
+  a.click();
+  window.setTimeout(function () {
+    URL.revokeObjectURL(a.href);
+    if (a.parentNode) a.parentNode.removeChild(a);
+  }, 400);
+  toast("학습 기록을 파일로 저장했습니다.", "good");
+}
+function resetLearningRecords() {
+  Store.remove(LS.save); Store.remove(LS.results);
+  Store.remove(LS.codex); Store.remove(LS.stamps);
+  Store.remove(LS.profile); Store.remove(LS.atlasQuiz);
+  codexSet = []; stampSet = []; atlasQuizDone = {};
+  saveProfile(Object.assign({}, DEFAULT_PROFILE));
+  game = null;
+  clearSaveFlagRefresh();
+  renderCoverStats();
+  renderHeroMap();
+  renderOffice();
+  toast("학습 기록을 초기화했습니다. 이용자 정보는 그대로입니다.", "good");
+}
+function resetAllDeviceData() {
+  Store.remove(LS.settings); Store.remove(LS.save); Store.remove(LS.groups);
+  Store.remove(LS.results); Store.remove(LS.codex); Store.remove(LS.stamps);
+  Store.remove(LS.profile); Store.remove(LS.atlasQuiz);
+  Store.remove(LS.tutorial); Store.remove(LS.tutorials); Store.remove(LS.user);
+  settings = Object.assign({}, DEFAULT_SETTINGS);
+  codexSet = []; stampSet = []; atlasQuizDone = {};
+  game = null;
+  saveSettings();
+  syncAudioUI();
+  clearSaveFlagRefresh();
+  renderCoverStats();
+  renderHeroMap();
+  renderOffice();
+  toast("모든 데이터를 초기화했습니다.", "good");
 }
 
 /* ---------------------------- 선생님 메뉴 (PIN) ---------------------------- */
@@ -3986,16 +4277,20 @@ function openTeacherPinModal(onOk) {
   });
 }
 
+function openStudentGuide() {
+  showScreen("screen-student-guide", true);
+}
 function openTeacherGuide() {
   showScreen("screen-teacher-guide", true);
 }
+function openGuide() { openStudentGuide(); }
 
 function printTeacherGuide() {
   if (!$("#screen-teacher-guide") || !$("#screen-teacher-guide").classList.contains("is-active")) {
     showScreen("screen-teacher-guide");
   }
   var prevTitle = document.title;
-  document.title = "URBAN_TRAIL_선생님_수업안내";
+  document.title = "URBAN_TRAIL_프로그램_가이드";
   window.setTimeout(function () {
     window.print();
     document.title = prevTitle;
@@ -4251,7 +4546,7 @@ function renderResultsScreen() {
  * [N-1] 시작 화면 튜토리얼
  * ========================================================================= */
 
-var TUTORIAL_STEPS = [
+var HOME_TUTORIAL_STEPS = [
   {
     target: null,
     title: "URBAN TRAIL에 오신 것을 환영합니다",
@@ -4283,14 +4578,19 @@ var TUTORIAL_STEPS = [
     body: "게임·트레일 맵에서 모은 스탬프와 발견 기록을 확인합니다. 도시를 누르면 트레일 맵으로 이동합니다."
   },
   {
-    target: "[data-tutorial='hero-play']",
-    title: "어반 런 시작",
-    body: "가장 빠른 시작 버튼입니다. 플레이 시간·팀 정보·여행 말을 고르는 설정 화면으로 이동합니다."
+    target: "[data-tutorial='guide-student']",
+    title: "학생용 가이드",
+    body: "주사위 굴리기, 도시 카드 읽기, 미션, 점수, PDF 제출 방법이 정리되어 있습니다."
   },
   {
-    target: "[data-tutorial='continue']",
-    title: "이어하기",
-    body: "진행 중인 게임이 저장되어 있을 때 활성화됩니다. 중단했던 여행을 이어서 할 수 있어요."
+    target: "[data-tutorial='guide-teacher']",
+    title: "교사용 가이드",
+    body: "수업에서 프로그램을 활용하는 방법, 학생 안내 말, 50분 흐름이 정리되어 있습니다."
+  },
+  {
+    target: "[data-tutorial='guide-tutorial']",
+    title: "화면 안내",
+    body: "이 버튼을 다시 누르면 지금처럼 주요 버튼을 하나씩 안내받을 수 있습니다."
   },
   {
     target: "[data-tutorial='route-explore']",
@@ -4300,22 +4600,12 @@ var TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='route-play']",
     title: "어반 런 카드",
-    body: "보드게임 플레이로 이동합니다. 상단 메뉴·큰 시작 버튼과 같은 기능이에요."
+    body: "보드게임으로 이동합니다. 상단 메뉴와 같은 기능이에요."
   },
   {
     target: "[data-tutorial='route-collect']",
     title: "트레일 로그 카드",
     body: "스탬프와 발견 도시를 모아 둔 기록장입니다. 권역별로 얼마나 채웠는지 확인할 수 있습니다."
-  },
-  {
-    target: "[data-tutorial='howto']",
-    title: "게임 방법",
-    body: "주사위 굴리기, 도시 카드 읽기, 랜드마크 미션, 점수 규칙을 단계별로 설명합니다."
-  },
-  {
-    target: "[data-tutorial='teacher']",
-    title: "선생님용",
-    body: "선생님이 프로그램을 활용하는 방법, 학생 안내 말, 수업 중 활동 아이디어가 정리되어 있습니다."
   },
   {
     target: "[data-tutorial='sfx']",
@@ -4325,20 +4615,130 @@ var TUTORIAL_STEPS = [
   {
     target: null,
     title: "안내를 마쳤습니다",
-    body: "이제 원하는 버튼을 눌러 여행을 시작해 보세요. 다시 보고 싶으면 홈 하단의 <b>💡 화면 안내</b>를 누르세요."
+    body: "이제 원하는 버튼을 눌러 여행을 시작해 보세요. 다시 보고 싶으면 홈의 <b>💡 화면 안내</b>를 누르세요."
   }
 ];
 
+var ATLAS_TUTORIAL_STEPS = [
+  {
+    target: null,
+    title: "트레일 맵에 오신 것을 환영합니다",
+    body: "세계 지도에서 48개 도시를 탐험하는 화면입니다. <b>다음</b>을 눌러 주요 버튼을 살펴보세요."
+  },
+  {
+    target: "[data-tutorial='atlas-map']",
+    title: "세계 지도",
+    body: "점을 누르면 도시 정보가 오른쪽에 열립니다. 확대·이동하며 위치를 확인해 보세요."
+  },
+  {
+    target: "[data-tutorial='atlas-search']",
+    title: "검색과 필터",
+    body: "도시·나라·랜드마크 이름으로 찾고, 권역·기능으로 걸러 볼 수 있습니다."
+  },
+  {
+    target: "[data-tutorial='atlas-view']",
+    title: "지도 / 목록",
+    body: "지도 보기와 카드 목록 보기를 바꿀 수 있습니다. 도시 비교도 여기서 시작합니다."
+  },
+  {
+    target: "[data-tutorial='atlas-panel']",
+    title: "도시 정보 패널",
+    body: "선택한 도시의 사진·기후·산업·미션이 여기에 나타납니다. 랜드마크 사진도 함께 볼 수 있어요."
+  },
+  {
+    target: null,
+    title: "탐험을 시작해 보세요",
+    body: "지도의 점을 눌러 도시를 열어 보세요. 다시 보려면 홈의 <b>화면 안내</b>를 이용하세요."
+  }
+];
+
+var PLAY_TUTORIAL_STEPS = [
+  {
+    target: null,
+    title: "어반 런을 시작합니다",
+    body: "주사위를 굴려 도시를 여행하는 보드게임입니다. 보드와 옆 패널을 함께 보세요."
+  },
+  {
+    target: "[data-tutorial='game-board']",
+    title: "여행 보드",
+    body: "도착하면 도시 학습 대시보드가 열립니다. 미리 보려면 도시 칸을 눌러 보세요."
+  },
+  {
+    target: "[data-tutorial='game-dice']",
+    title: "주사위",
+    body: "지금 차례인 친구가 <b>주사위 굴리기</b>를 누릅니다. 주사위가 입체적으로 굴러 눈이 나옵니다."
+  },
+  {
+    target: "[data-tutorial='game-info']",
+    title: "여행 정보",
+    body: "점수·스탬프·남은 턴이 여기에 표시됩니다. 팀을 한눈에 확인할 수 있어요."
+  },
+  {
+    target: "[data-tutorial='game-goals']",
+    title: "여행 목표",
+    body: "이번 판에서 달성하면 보너스 점수를 받는 목표 3장입니다. 점수 카드 안에서 모두 볼 수 있어요."
+  },
+  {
+    target: null,
+    title: "여행을 떠나 보세요",
+    body: "주사위를 굴려 첫 도시로 이동해 보세요. 도착하면 도시 학습 대시보드가 넓게 열려 함께 읽기 좋아요."
+  }
+];
+
+var PASSPORT_TUTORIAL_STEPS = [
+  {
+    target: null,
+    title: "트레일 로그입니다",
+    body: "게임과 트레일 맵에서 모은 발견·스탬프가 한곳에 쌓입니다."
+  },
+  {
+    target: "[data-tutorial='log-summary']",
+    title: "진행 현황",
+    body: "지금까지 받은 스탬프와 발견한 도시 수가 요약됩니다."
+  },
+  {
+    target: "[data-tutorial='log-grid']",
+    title: "도시 노드",
+    body: "각 도시는 랜드마크 사진으로 표시됩니다. 스탬프를 받은 도시에는 그 위에 스탬프가 찍힙니다. 도시를 누르면 트레일 맵으로 이동합니다."
+  },
+  {
+    target: null,
+    title: "로그를 채워 보세요",
+    body: "어반 런 미션을 성공하면 이 칸에 스탬프 사진이 남습니다."
+  }
+];
+
+var TUTORIAL_PACKS = {
+  home: HOME_TUTORIAL_STEPS,
+  atlas: ATLAS_TUTORIAL_STEPS,
+  play: PLAY_TUTORIAL_STEPS,
+  passport: PASSPORT_TUTORIAL_STEPS
+};
+
 var tutorialActive = false;
 var tutorialStep = 0;
+var tutorialKind = "home";
+var TUTORIAL_STEPS = HOME_TUTORIAL_STEPS;
 var tutorialTargetEl = null;
 var tutorialLayoutTimer = null;
 
-function tutorialCompleted() {
-  return !!Store.get(LS.tutorial, false);
+function tutorialState() {
+  var map = Store.get(LS.tutorials, null);
+  if (!map || typeof map !== "object") {
+    map = { home: !!Store.get(LS.tutorial, false) };
+  }
+  return map;
 }
-function markTutorialCompleted() {
-  Store.set(LS.tutorial, true);
+function tutorialCompleted(kind) {
+  kind = kind || tutorialKind || "home";
+  return !!tutorialState()[kind];
+}
+function markTutorialCompleted(kind) {
+  kind = kind || tutorialKind || "home";
+  var map = tutorialState();
+  map[kind] = true;
+  Store.set(LS.tutorials, map);
+  if (kind === "home") Store.set(LS.tutorial, true);
 }
 
 function closeTutorial(markDone) {
@@ -4362,11 +4762,16 @@ function closeTutorial(markDone) {
   window.removeEventListener("scroll", layoutTutorialStep, true);
 }
 
-function startTutorial(force) {
+function startTutorial(force, kind) {
+  kind = kind || "home";
   if (tutorialActive) return;
-  if (!force && tutorialCompleted()) return;
-  if (!$("#screen-title") || !$("#screen-title").classList.contains("is-active")) {
-    showScreen("screen-title");
+  if (!force && tutorialCompleted(kind)) return;
+  tutorialKind = kind;
+  TUTORIAL_STEPS = TUTORIAL_PACKS[kind] || HOME_TUTORIAL_STEPS;
+  if (kind === "home") {
+    if (!$("#screen-title") || !$("#screen-title").classList.contains("is-active")) {
+      showScreen("screen-title");
+    }
   }
   tutorialStep = 0;
   tutorialActive = true;
@@ -4380,6 +4785,12 @@ function startTutorial(force) {
   window.addEventListener("scroll", layoutTutorialStep, true);
   renderTutorialStep();
   Sound.unlock();
+}
+function maybeStartScreenTutorial(kind) {
+  window.setTimeout(function () {
+    if (tutorialActive) return;
+    startTutorial(false, kind);
+  }, 420);
 }
 
 function tutorialGo(delta) {
@@ -4520,6 +4931,11 @@ function resumeOrNewGame() {
     enterGameScreen();
     return;
   }
+  var saved = loadGame();
+  if (saved && !saved.finished) {
+    continueGame();
+    return;
+  }
   ACTIONS["new-game"]();
 }
 
@@ -4558,12 +4974,30 @@ var ACTIONS = {
     backScreen("screen-title");
   },
   "codex-back": function () { backScreen("screen-title"); },
-  "open-howto": function () { Sound.unlock(); showScreen("screen-howto", true); },
+  "open-howto": function () { Sound.unlock(); openStudentGuide(); },
   "howto-back": function () { backScreen("screen-title"); },
+  "open-guide": function () { Sound.unlock(); openStudentGuide(); },
+  "open-student-guide": function () { Sound.unlock(); openStudentGuide(); },
   "open-teacher-guide": function () { Sound.unlock(); openTeacherGuide(); },
   "print-teacher-guide": function () { Sound.unlock(); printTeacherGuide(); },
   "open-teacher": function () { Sound.unlock(); openTeacher(); },
   "open-results": function () { Sound.unlock(); openResults(); },
+  "go-back": function () { backScreen("screen-title"); },
+  "open-office": function () { Sound.unlock(); openOffice(); },
+  "office-save": function () { Sound.unlock(); saveOfficeForm(); },
+  "office-export": function () { Sound.unlock(); exportLearningBundle(); },
+  "office-reset-learn": function () {
+    Sound.unlock();
+    confirmDialog("학습기록 초기화",
+      "발견 도시·스탬프·여행 결과·진행 중 게임을 지울까요?<br>학교·이름 등 이용자 정보는 남습니다.",
+      function () { resetLearningRecords(); }, "초기화");
+  },
+  "office-reset-all": function () {
+    Sound.unlock();
+    confirmDialog("전체 초기화",
+      "이용자 정보와 학습 기록, 설정까지 모두 처음 상태로 되돌립니다.",
+      function () { resetAllDeviceData(); }, "초기화");
+  },
   "go-title": function () {
     if ($("#screen-title") && $("#screen-title").classList.contains("is-active")) return;
     if (isGameInProgress()) {
@@ -4576,7 +5010,7 @@ var ACTIONS = {
     goTitleNow();
   },
 
-  "start-tutorial": function () { Sound.unlock(); startTutorial(true); },
+  "start-tutorial": function () { Sound.unlock(); startTutorial(true, "home"); },
   "tutorial-next": function () { tutorialGo(1); },
   "tutorial-prev": function () { tutorialGo(-1); },
   "tutorial-skip": function () {
@@ -4682,6 +5116,8 @@ function init() {
   syncAudioUI();
   bindAudioUI();
   bindActions();
+  ensureDiceCube();
+  drawDice(1, { instant: true });
   clearSaveFlagRefresh();
   renderCoverStats();
   renderHeroMap();
