@@ -25,7 +25,7 @@
  * [A] 상수 · 권역 · 말 · 색상
  * ========================================================================= */
 
-var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.1.0" };
+var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.1.1" };
 
 /* 저장소 키 */
 var LS = {
@@ -634,6 +634,10 @@ function updateSiteNav(screenId) {
 
 function showScreen(id, remember) {
   var cur = $(".screen.is-active");
+  if (cur && cur.id === id) {
+    updateSiteNav(id);
+    return;
+  }
   if (cur && remember) screenStack.push(cur.id);
   $$(".screen").forEach(function (s) { s.classList.remove("is-active"); });
   var next = document.getElementById(id);
@@ -1169,6 +1173,7 @@ function renderBoard() {
     var node;
     if (t.type === "city") {
       var c = getCity(t.cityId);
+      if (!c) return;
       node = el("div", "tile tile-city");
       node.style.setProperty("--c", c.continentColor);
       node.innerHTML =
@@ -2245,7 +2250,7 @@ function travelRank(stamps) {
 }
 
 function isGameInProgress() {
-  return !!(game && !game.finished && $("#screen-game") && $("#screen-game").classList.contains("is-active"));
+  return !!(game && !game.finished);
 }
 
 function goTitleNow() {
@@ -3932,7 +3937,7 @@ function openPassport() {
       openAtlas({ view: "map", cityId: id });
     });
   });
-  showScreen("screen-passport");
+  showScreen("screen-passport", true);
 }
 
 /* ---------------------------- 선생님 메뉴 (PIN) ---------------------------- */
@@ -4270,7 +4275,7 @@ var TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='nav-play']",
     title: "어반 런 (상단 메뉴)",
-    body: "보드게임을 시작합니다. 팀 정보와 여행 말을 고른 뒤, 친구들과 돌아가며 주사위를 굴려 도시를 방문합니다."
+    body: "보드게임을 시작합니다. 이미 여행 중이면 그 화면으로 돌아갑니다."
   },
   {
     target: "[data-tutorial='nav-passport']",
@@ -4510,6 +4515,14 @@ function bindAudioUI() {
 }
 
 /* data-act 속성 기반 이벤트 위임 */
+function resumeOrNewGame() {
+  if (game && !game.finished) {
+    enterGameScreen();
+    return;
+  }
+  ACTIONS["new-game"]();
+}
+
 var ACTIONS = {
   "new-game": function () {
     Sound.unlock();
@@ -4520,6 +4533,7 @@ var ACTIONS = {
       }, "새로 시작");
     } else { openSetup(); }
   },
+  "nav-play": function () { Sound.unlock(); resumeOrNewGame(); },
   "continue-game": function () { Sound.unlock(); continueGame(); },
   "open-atlas": function () { Sound.unlock(); openAtlas(); },
   "open-codex": function () { Sound.unlock(); openAtlas({ view: "list" }); },
@@ -4539,6 +4553,10 @@ var ACTIONS = {
   "open-compare": function () { Sound.unlock(); openCompare(); },
   "compare-back": function () { showScreen("screen-atlas"); },
   "open-passport": function () { Sound.unlock(); openPassport(); },
+  "passport-back": function () {
+    if (game && !game.finished) { enterGameScreen(); return; }
+    backScreen("screen-title");
+  },
   "codex-back": function () { backScreen("screen-title"); },
   "open-howto": function () { Sound.unlock(); showScreen("screen-howto", true); },
   "howto-back": function () { backScreen("screen-title"); },
@@ -4547,8 +4565,12 @@ var ACTIONS = {
   "open-teacher": function () { Sound.unlock(); openTeacher(); },
   "open-results": function () { Sound.unlock(); openResults(); },
   "go-title": function () {
+    if ($("#screen-title") && $("#screen-title").classList.contains("is-active")) return;
     if (isGameInProgress()) {
-      confirmLeaveGame(function () { goTitleNow(); });
+      confirmLeaveGame(function () {
+        saveGame();
+        goTitleNow();
+      });
       return;
     }
     goTitleNow();
