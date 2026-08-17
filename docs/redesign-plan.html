@@ -1,0 +1,918 @@
+<title>CITY PASSPORT 2.0 개편 기획서</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   CITY PASSPORT 2.0 개편 기획서
+   팔레트: 지도책의 단채(段彩) — 바다(청)·저지(녹)·고원(황갈)·산지(적갈)
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --ground:    #E9EDF0;
+  --surface:   #FBFCFD;
+  --surface-2: #F1F5F7;
+  --ink:       #15242F;
+  --ink-2:     #4E6373;
+  --ink-3:     #7F919F;
+  --rule:      #CCD7DF;
+  --rule-soft: #DFE7EC;
+  --sea:       #2C6C8C;
+  --sea-deep:  #1B4A63;
+  --sea-soft:  #DDE9F0;
+  --lowland:   #63894C;
+  --tan:       #B08838;
+  --upland:    #9A5F3E;
+  --shadow:    0 1px 2px rgba(21,36,47,.06), 0 8px 28px rgba(21,36,47,.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #0C1620;
+    --surface:   #13222E;
+    --surface-2: #192B39;
+    --ink:       #DBE6ED;
+    --ink-2:     #93A8B7;
+    --ink-3:     #677C8C;
+    --rule:      #263A4A;
+    --rule-soft: #1D2F3D;
+    --sea:       #62AACD;
+    --sea-deep:  #8FC6E0;
+    --sea-soft:  #14303F;
+    --lowland:   #93B778;
+    --tan:       #D3AE6C;
+    --upland:    #C4835B;
+    --shadow:    0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:    #0C1620;
+  --surface:   #13222E;
+  --surface-2: #192B39;
+  --ink:       #DBE6ED;
+  --ink-2:     #93A8B7;
+  --ink-3:     #677C8C;
+  --rule:      #263A4A;
+  --rule-soft: #1D2F3D;
+  --sea:       #62AACD;
+  --sea-deep:  #8FC6E0;
+  --sea-soft:  #14303F;
+  --lowland:   #93B778;
+  --tan:       #D3AE6C;
+  --upland:    #C4835B;
+  --shadow:    0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+               "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 120px; }
+
+/* ── 표제부 ─────────────────────────────────────────────── */
+.masthead {
+  padding: 72px 0 36px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 8px;
+}
+.sheet-mark {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--sea);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 26px;
+}
+.sheet-mark span { white-space: nowrap; }
+h1 {
+  font-size: clamp(30px, 5.6vw, 50px);
+  line-height: 1.1;
+  letter-spacing: -.035em;
+  font-weight: 800;
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+h1 em {
+  font-style: normal;
+  display: block;
+  font-size: .44em;
+  letter-spacing: .16em;
+  font-weight: 700;
+  color: var(--sea);
+  margin-bottom: .5em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+}
+.standfirst {
+  font-size: clamp(16px, 2.2vw, 19px);
+  color: var(--ink-2);
+  max-width: 34em;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── 결정 사항 요약 ─────────────────────────────────────── */
+.decisions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin: 40px 0 8px;
+}
+.decision { background: var(--surface); padding: 18px 20px; }
+.decision .k {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-3); display: block; margin-bottom: 8px;
+}
+.decision .v { font-weight: 700; font-size: 15px; line-height: 1.5; }
+.decision .n { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.6; }
+
+/* ── 섹션 ───────────────────────────────────────────────── */
+section { padding-top: 56px; }
+h2 {
+  font-size: clamp(21px, 3vw, 27px);
+  letter-spacing: -.025em;
+  font-weight: 800;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  text-wrap: balance;
+}
+h2 .no {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px; font-weight: 500;
+  color: var(--sea); letter-spacing: .04em;
+  flex: 0 0 auto;
+}
+.lede { color: var(--ink-2); margin: 0 0 26px; max-width: 40em; }
+h3 {
+  font-size: 16px; font-weight: 800; margin: 34px 0 10px;
+  letter-spacing: -.01em;
+  padding-bottom: 7px; border-bottom: 1px solid var(--rule-soft);
+  display: flex; align-items: baseline; gap: 10px;
+}
+h3 .tag {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: .06em;
+}
+p { margin: 0 0 14px; max-width: 40em; }
+strong { font-weight: 700; }
+mark {
+  background: var(--sea-soft); color: var(--ink);
+  padding: .1em .3em; border-radius: 2px; font-weight: 700;
+}
+ul, ol { margin: 0 0 16px; padding-left: 1.25em; max-width: 40em; }
+li { margin-bottom: 7px; }
+li::marker { color: var(--ink-3); }
+a { color: var(--sea); }
+
+/* ── 진단 카드 ──────────────────────────────────────────── */
+.findings { display: grid; gap: 14px; margin-bottom: 8px; }
+.finding {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--upland);
+  padding: 18px 22px;
+  box-shadow: var(--shadow);
+}
+.finding h4 {
+  margin: 0 0 6px; font-size: 15.5px; font-weight: 800; letter-spacing: -.01em;
+}
+.finding p { margin: 0; font-size: 14.5px; color: var(--ink-2); max-width: none; }
+.finding .metric {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--upland); font-weight: 700;
+}
+
+/* ── 전환 문장 ──────────────────────────────────────────── */
+.thesis {
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 26px 0 24px;
+  margin: 30px 0 0;
+}
+.thesis p {
+  font-size: clamp(18px, 2.7vw, 23px);
+  line-height: 1.55; font-weight: 700; letter-spacing: -.02em;
+  margin: 0; max-width: 26em; text-wrap: balance;
+}
+.thesis .sub { font-size: 15px; font-weight: 400; color: var(--ink-2); margin-top: 12px; letter-spacing: 0; }
+
+/* ── 세 개의 축 ─────────────────────────────────────────── */
+.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 14px; }
+.pillar {
+  background: var(--surface); border: 1px solid var(--rule); padding: 20px;
+  box-shadow: var(--shadow);
+}
+.pillar .band { height: 3px; margin: -20px -20px 16px; }
+.pillar:nth-child(1) .band { background: var(--sea); }
+.pillar:nth-child(2) .band { background: var(--tan); }
+.pillar:nth-child(3) .band { background: var(--lowland); }
+.pillar .role {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3);
+}
+.pillar h4 { margin: 5px 0 8px; font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+.pillar p { font-size: 14px; color: var(--ink-2); margin: 0; max-width: none; }
+
+/* ── 와이어프레임 ───────────────────────────────────────── */
+figure { margin: 26px 0 30px; }
+.frame {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.frame-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-bottom: 1px solid var(--rule);
+  background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px; color: var(--ink-3); letter-spacing: .08em;
+}
+.frame-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); display: block; }
+.atlas { display: grid; grid-template-columns: 1fr 232px; min-height: 320px; }
+.atlas-map { position: relative; background: var(--sea-soft); border-right: 1px solid var(--rule); }
+.atlas-map svg { display: block; width: 100%; height: 100%; }
+.atlas-tools {
+  position: absolute; left: 12px; top: 12px; display: flex; gap: 5px; flex-wrap: wrap;
+}
+.atlas-tools b {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9.5px; font-weight: 500; letter-spacing: .08em;
+  background: var(--surface); border: 1px solid var(--rule);
+  padding: 3px 7px; color: var(--ink-2);
+}
+.atlas-zoom {
+  position: absolute; right: 12px; bottom: 12px;
+  display: flex; flex-direction: column; border: 1px solid var(--rule); background: var(--surface);
+}
+.atlas-zoom span {
+  width: 24px; height: 24px; display: grid; place-items: center;
+  font-size: 13px; color: var(--ink-2);
+}
+.atlas-zoom span + span { border-top: 1px solid var(--rule); }
+.atlas-panel { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ph-img {
+  aspect-ratio: 16/9; background: var(--surface-2); border: 1px solid var(--rule);
+  display: grid; place-items: center;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px; color: var(--ink-3); letter-spacing: .1em;
+}
+.ph-tabs { display: flex; gap: 3px; flex-wrap: wrap; }
+.ph-tabs i {
+  font-style: normal; font-size: 10.5px; padding: 3px 7px;
+  border: 1px solid var(--rule); color: var(--ink-3);
+}
+.ph-tabs i.on { background: var(--sea); border-color: var(--sea); color: #fff; }
+.ph-line { height: 7px; background: var(--rule-soft); }
+.ph-line.s { width: 62%; }
+.ph-title { font-weight: 800; font-size: 15px; letter-spacing: -.01em; }
+.ph-sub {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px; color: var(--ink-3); letter-spacing: .1em; margin-top: -6px;
+}
+figcaption {
+  font-size: 13px; color: var(--ink-3); margin-top: 10px; line-height: 1.6;
+  border-left: 2px solid var(--rule); padding-left: 12px;
+}
+
+/* ── 화면 구조도 ────────────────────────────────────────── */
+.tree {
+  background: var(--surface); border: 1px solid var(--rule);
+  padding: 24px; box-shadow: var(--shadow); overflow-x: auto;
+}
+.tree-root {
+  display: inline-block; font-weight: 800; font-size: 14px;
+  border: 2px solid var(--ink); padding: 7px 16px; margin-bottom: 20px;
+}
+.branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.branch { border-top: 3px solid var(--c, var(--sea)); padding-top: 12px; min-width: 180px; }
+.branch h5 {
+  margin: 0 0 3px; font-size: 14.5px; font-weight: 800; letter-spacing: -.01em;
+}
+.branch .note {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 10px;
+}
+.branch ul { list-style: none; padding: 0; margin: 0; }
+.branch li {
+  font-size: 13.5px; color: var(--ink-2); padding: 5px 0 5px 14px;
+  border-bottom: 1px dotted var(--rule); position: relative; margin: 0;
+}
+.branch li::before {
+  content: ""; position: absolute; left: 0; top: 14px;
+  width: 6px; height: 1px; background: var(--c, var(--sea));
+}
+.branch li b { color: var(--ink); font-weight: 700; }
+.branch li .new {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px; letter-spacing: .08em; color: var(--surface);
+  background: var(--c, var(--sea)); padding: 1px 4px; margin-left: 5px;
+  vertical-align: 1px;
+}
+
+/* ── 표 ─────────────────────────────────────────────────── */
+.tablewrap { overflow-x: auto; margin-bottom: 20px; border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 480px; background: var(--surface); }
+th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+thead th {
+  background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500; white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td.num {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+td b { font-weight: 700; }
+
+/* ── 로드맵 ─────────────────────────────────────────────── */
+.phases { display: grid; gap: 12px; }
+.phase {
+  display: grid; grid-template-columns: 74px 1fr; gap: 20px;
+  background: var(--surface); border: 1px solid var(--rule);
+  padding: 18px 20px; box-shadow: var(--shadow);
+}
+.phase .stage { border-right: 1px solid var(--rule-soft); padding-right: 16px; }
+.phase .stage .n {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 25px; font-weight: 700; line-height: 1; color: var(--c, var(--sea));
+  font-variant-numeric: tabular-nums;
+}
+.phase .stage .l {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); margin-top: 5px;
+}
+.phase h4 { margin: 0 0 8px; font-size: 16px; font-weight: 800; letter-spacing: -.015em; }
+.phase ul { margin: 0; padding-left: 1.1em; }
+.phase li { font-size: 14px; color: var(--ink-2); margin-bottom: 4px; }
+.phase .why {
+  font-size: 13px; color: var(--ink-3); margin: 10px 0 0;
+  padding-top: 9px; border-top: 1px dotted var(--rule);
+}
+
+/* ── 코드 ───────────────────────────────────────────────── */
+pre {
+  background: var(--surface); border: 1px solid var(--rule);
+  padding: 18px; overflow-x: auto; margin: 0 0 18px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 12.5px; line-height: 1.75; box-shadow: var(--shadow);
+}
+code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace; font-size: .9em; }
+:not(pre) > code {
+  background: var(--surface-2); border: 1px solid var(--rule-soft);
+  padding: .08em .35em; border-radius: 2px; color: var(--sea-deep);
+}
+.c-key { color: var(--sea); }
+.c-str { color: var(--lowland); }
+.c-num { color: var(--upland); }
+.c-com { color: var(--ink-3); font-style: italic; }
+
+/* ── 원칙 목록 ──────────────────────────────────────────── */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.rule { background: var(--surface); padding: 15px 18px; }
+.rule .h { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+.rule .d { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+
+/* ── 마무리 ─────────────────────────────────────────────── */
+.colophon {
+  margin-top: 72px; padding-top: 22px; border-top: 2px solid var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px; letter-spacing: .1em; color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: 8px 26px;
+}
+
+@media (max-width: 640px) {
+  .atlas { grid-template-columns: 1fr; }
+  .atlas-map { border-right: none; border-bottom: 1px solid var(--rule); min-height: 220px; }
+  .phase { grid-template-columns: 1fr; gap: 12px; }
+  .phase .stage { border-right: none; border-bottom: 1px solid var(--rule-soft); padding: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+  .phase .stage .l { margin-top: 0; }
+  .masthead { padding-top: 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="sheet-mark">
+    <span>CITY PASSPORT 2.0</span>
+    <span>개편 기획서</span>
+    <span>2026-08-17</span>
+    <span>도시의 미래탐구</span>
+  </div>
+  <h1><em>REDESIGN PROPOSAL</em>주사위가 데려다주는 도시 옆에,<br>내가 찾아가는 도시를 놓는다</h1>
+  <p class="standfirst">
+    1.0은 모둠 대항 보드게임으로 잘 작동한다. 다만 학생이 만나는 도시가 주사위에 전적으로 달려 있고,
+    혼자서는 시작조차 할 수 없다. 2.0은 <strong>지도 탐험</strong>이라는 두 번째 통로를 열고,
+    두 통로를 <strong>스탬프</strong> 하나로 잇는다.
+  </p>
+</header>
+
+<div class="decisions">
+  <div class="decision">
+    <span class="k">Solo Mode</span>
+    <div class="v">수업 중 1인 1기기 + 가정 예습·복습</div>
+    <div class="n">두 상황을 모두 지원 → 단기 결과 수합과 장기 누적 기록이 동시에 필요</div>
+  </div>
+  <div class="decision">
+    <span class="k">Imagery</span>
+    <div class="v">로컬 파일 + 외부 URL 허용</div>
+    <div class="n">준비 부담을 낮추되, 네트워크가 막힌 학교를 위해 전체 비활성 스위치를 둔다</div>
+  </div>
+  <div class="decision">
+    <span class="k">Cartography</span>
+    <div class="v">정밀 세계지도 + 확대·이동</div>
+    <div class="n">외부 지도 API 없이 SVG 자체 제작 원칙은 그대로 유지</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§1</span>현황 진단</h2>
+  <p class="lede">
+    1.0을 실제로 15턴(기본 탐험) 완주시켜 측정한 결과를 근거로 한다.
+  </p>
+
+  <div class="findings">
+    <div class="finding">
+      <h4>학습 범위가 주사위에 종속된다</h4>
+      <p>
+        기본 탐험 1회를 완주하면 방문 도시는 <span class="metric">11곳</span>,
+        스탬프는 <span class="metric">10개</span>였다. 데이터로 준비된 48개 도시 중
+        <span class="metric">약 23%</span>다. 나머지 37개 도시는 학생이 존재조차 모른 채 수업이 끝난다.
+        게다가 보드에 오르는 도시 자체가 매 게임 24개로 제한되므로, 절반은 아예 후보에도 없다.
+      </p>
+    </div>
+    <div class="finding">
+      <h4>혼자서는 시작할 수 없다</h4>
+      <p>
+        설정 2단계가 학생 이름 <span class="metric">2명 이상</span>을 요구한다.
+        결석·홀수 인원·개별 학습 시간·가정 복습 — 1인 상황 전체가 진입 불가다.
+      </p>
+    </div>
+    <div class="finding">
+      <h4>지도가 정보를 담지 않는다</h4>
+      <p>
+        보드 중앙 지도는 현재 위치를 표시할 뿐 클릭할 수 없고, 도감은 격자 목록이라
+        “이 도시가 지구의 어디쯤인가”라는 가장 기본적인 공간 감각이 생기지 않는다.
+        도시 정보에 닿는 경로가 <span class="metric">‘게임에서 도착하기’ 하나뿐</span>이다.
+      </p>
+    </div>
+  </div>
+
+  <div class="thesis">
+    <p>문제는 기능이 모자란 것이 아니라, 게임의 우연성과 학습의 체계성이 한 통로에 묶여 있다는 것이다.</p>
+    <p class="sub">
+      우연은 게임을 재미있게 만들지만 커리큘럼을 만들지는 못한다.
+      두 가지를 분리하고, 보상 체계로 다시 연결하는 것이 2.0의 뼈대다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§2</span>2.0의 구조 — 세 개의 축</h2>
+  <p class="lede">
+    화면을 늘리는 개편이 아니라, 진입점을 셋으로 정리하는 개편이다.
+    시작 화면은 6개 버튼 나열에서 세 개의 큰 선택지로 바뀐다.
+  </p>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="band"></div>
+      <div class="role">신규 · 핵심</div>
+      <h4>월드 아틀라스</h4>
+      <p>정밀 세계지도 위 48개 도시 핫스팟. 게임과 무관하게 언제나 전체 도시에 접근한다. 도감을 흡수해 지도 뷰와 목록 뷰를 오간다.</p>
+    </div>
+    <div class="pillar">
+      <div class="band"></div>
+      <div class="role">기존 · 확장</div>
+      <h4>보드게임</h4>
+      <p>모둠 플레이는 그대로 두고 <strong>혼자 플레이</strong>를 추가한다. 여행 목표 카드를 넣어 1인전에도 방향성을 준다.</p>
+    </div>
+    <div class="pillar">
+      <div class="band"></div>
+      <div class="role">기존 · 통합</div>
+      <h4>나의 여권</h4>
+      <p>게임 한 판을 넘어 누적되는 개인 기록. 수집률·최고 기록·모둠 결과를 한곳에서 본다.</p>
+    </div>
+  </div>
+
+  <h3>세 축을 잇는 것 <span class="tag">the hinge</span></h3>
+  <p>
+    핵심 연결 장치는 <mark>스탬프</mark> 하나다.
+    게임에서 랜드마크 미션에 성공해도, 아틀라스에서 도시를 읽고 퀴즈를 풀어도
+    <strong>같은 스탬프가 같은 여권에 쌓인다.</strong>
+    이 규칙 하나로 “집에서 지도 보며 공부한 것”이 “수업 시간의 게임”과 같은 화폐가 된다.
+    아틀라스가 게임의 곁가지가 아니라 대등한 통로가 되는 지점이다.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§3</span>월드 아틀라스</h2>
+  <p class="lede">신규 화면이자 이번 개편의 무게중심.</p>
+
+  <figure>
+    <div class="frame">
+      <div class="frame-bar"><i></i><i></i><i></i><span>월드 아틀라스 — 지도 뷰</span></div>
+      <div class="atlas">
+        <div class="atlas-map">
+          <svg viewBox="0 0 520 320" role="img" aria-label="월드 아틀라스 화면 개념 스케치">
+            <!-- 경위선 -->
+            <g stroke="var(--rule)" stroke-width="1" opacity=".55">
+              <path d="M0 80H520M0 160H520M0 240H520M104 0V320M208 0V320M312 0V320M416 0V320"/>
+            </g>
+            <!-- 개략 대륙 -->
+            <g fill="var(--surface-2)" stroke="var(--rule)" stroke-width="1.2" stroke-linejoin="round">
+              <path d="M42 52 78 40 122 52 138 84 118 112 128 140 96 152 74 128 52 96Z"/>
+              <path d="M112 176 140 168 152 196 142 244 122 276 108 244 104 204Z"/>
+              <path d="M232 74 268 62 292 76 300 108 286 152 262 186 240 160 228 118Z"/>
+              <path d="M226 34 262 26 292 36 286 56 250 62 230 52Z"/>
+              <path d="M310 30 372 24 430 40 462 34 470 62 430 78 386 70 344 82 314 64Z"/>
+              <path d="M414 196 452 188 478 200 470 226 432 234 410 220Z"/>
+            </g>
+            <!-- 핫스팟: 미발견 / 발견 / 스탬프 -->
+            <g>
+              <circle cx="96" cy="96"  r="3"   fill="var(--ink-3)" opacity=".5"/>
+              <circle cx="124" cy="212" r="3"   fill="var(--ink-3)" opacity=".5"/>
+              <circle cx="258" cy="128" r="3"   fill="var(--ink-3)" opacity=".5"/>
+              <circle cx="352" cy="66"  r="3"   fill="var(--ink-3)" opacity=".5"/>
+              <circle cx="70"  cy="72"  r="5"   fill="var(--sea)"/>
+              <circle cx="268" cy="88"  r="5"   fill="var(--lowland)"/>
+              <circle cx="440" cy="212" r="5"   fill="var(--tan)"/>
+              <circle cx="404" cy="52"  r="5"   fill="var(--upland)"/>
+              <circle cx="418" cy="56"  r="7.5" fill="none" stroke="var(--tan)" stroke-width="2.5"/>
+              <circle cx="418" cy="56"  r="4"   fill="var(--tan)"/>
+            </g>
+            <!-- 선택된 도시 -->
+            <g>
+              <circle cx="336" cy="54" r="11" fill="none" stroke="var(--sea)" stroke-width="1.5" opacity=".55"/>
+              <circle cx="336" cy="54" r="6"  fill="var(--sea)"/>
+              <rect x="296" y="20" width="80" height="20" fill="var(--surface)" stroke="var(--rule)"/>
+              <text x="336" y="34" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)"
+                    font-family="Pretendard, sans-serif">서울 · 대한민국</text>
+            </g>
+          </svg>
+          <div class="atlas-tools">
+            <b>전체</b><b>동·동남아</b><b>남·서아시아</b><b>유럽</b><b>아프리카</b><b>북미</b><b>남미·오세아니아</b>
+          </div>
+          <div class="atlas-zoom"><span>＋</span><span>－</span></div>
+        </div>
+        <div class="atlas-panel">
+          <div class="ph-img">이미지 갤러리 1 / 4</div>
+          <div class="ph-title">서울 · 대한민국</div>
+          <div class="ph-sub">37.57°N 126.98°E · 950만</div>
+          <div class="ph-tabs"><i class="on">개요</i><i>자연</i><i>인문</i><i>이야기</i><i>미션</i></div>
+          <div class="ph-line"></div><div class="ph-line"></div><div class="ph-line s"></div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      지도 뷰 개념 스케치. 좌측은 확대·이동이 가능한 세계지도, 우측은 선택한 도시의 상세 패널.
+      핫스팟 색은 권역을, 금색 이중 원은 스탬프를 이미 받은 도시를 뜻한다.
+    </figcaption>
+  </figure>
+
+  <h3>지도 엔진 <span class="tag">map</span></h3>
+  <ul>
+    <li><strong>정밀도</strong> — 현재 17개 개략 폴리곤(대륙당 8~30점)을 대륙당 <strong>60~120점</strong> 수준으로 다시 그린다. 반도·만·섬의 형태가 식별 가능한 수준이 목표.</li>
+    <li><strong>도법</strong> — 등장방형(equirectangular) 유지. 위경도 → 화면 좌표 변환이 단순해 핫스팟 좌표를 데이터에서 그대로 쓸 수 있다.</li>
+    <li><strong>확대·이동</strong> — SVG <code>viewBox</code>를 조작한다. 휠 줌, 드래그 팬, 더블클릭 줌, 권역 버튼으로 자동 프레이밍. 터치 드래그와 ＋／－ 버튼도 지원(태블릿·모바일).</li>
+    <li><strong>축척 3단계</strong> — 전 세계에서는 점만, 권역 축척에서는 도시명 라벨, 도시 축척에서는 랜드마크 아이콘과 국가명까지 단계적으로 드러낸다.</li>
+    <li><strong>폴백</strong> — 기존 개략 지도를 그대로 남겨, 정밀 데이터 작업이 끝나지 않은 대륙도 항상 표시되게 한다.</li>
+  </ul>
+
+  <h3>핫스팟 <span class="tag">hotspot</span></h3>
+  <ul>
+    <li>상태 3종 — <strong>미발견</strong>(작은 회색 점) / <strong>발견</strong>(권역 색) / <strong>스탬프 획득</strong>(금색 이중 원).</li>
+    <li>호버 시 도시명·국가 툴팁, 클릭 시 우측 상세 패널. 좁은 화면에서는 하단 시트로 올라온다.</li>
+    <li><strong>미발견 도시도 열람 가능</strong>하게 한다. 아틀라스는 게임 보상이 아니라 학습 자료이기 때문이다. 다만 교사 설정에 <em>미발견 도시 잠금</em> 스위치를 두어, 수집 동기를 강조하고 싶은 교사가 선택할 수 있게 한다(기본 꺼짐).</li>
+    <li>키보드 접근 — <kbd>Tab</kbd>으로 핫스팟 순회, <kbd>Enter</kbd>로 열기. 지도를 못 쓰는 상황을 위해 목록 뷰 토글을 항상 제공한다.</li>
+  </ul>
+
+  <h3>도시 상세 패널 <span class="tag">detail</span></h3>
+  <p>기존 도시 카드의 7개 항목을 5개 탭으로 재편해, 한 번에 읽는 양을 줄이고 비교 학습이 쉬워지게 한다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>탭</th><th>담는 내용</th><th>1.0에서의 위치</th></tr></thead>
+      <tbody>
+        <tr><td><b>개요</b></td><td>이미지 갤러리, 국기·권역, 좌표, 인구, 랜드마크</td><td>카드 상단 + 인구</td></tr>
+        <tr><td><b>자연환경</b></td><td>위치·지형, 기후, (신규) 기온·강수 그래프</td><td>위치와 지형 / 기후</td></tr>
+        <tr><td><b>인문환경</b></td><td>산업, 도시 기능, 문화</td><td>동일 3개 항목</td></tr>
+        <tr><td><b>도시 이야기</b></td><td>성장 배경, 흥미로운 사실, 키워드 태그</td><td>성장 배경 / 알아 두면 재미있는 사실</td></tr>
+        <tr><td><b>미션</b></td><td>해당 도시 퀴즈 2문항 — <b>정답 시 스탬프 획득</b></td><td>게임 중에만 가능했던 기능</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>이미지 갤러리 <span class="tag">media</span></h3>
+  <p>
+    도시당 1~4장. 표시 우선순위는 <strong>로컬 파일 → 외부 URL → 대체 카드</strong>다.
+    개별 이미지가 실패하면 조용히 빼고 나머지를 보여주며, 전부 실패하면 지금과 같은 대체 카드로 떨어진다.
+    <mark>이미지가 하나도 없어도 프로그램은 완전히 동작한다</mark>는 1.0의 원칙은 그대로다.
+  </p>
+  <ul>
+    <li>출처 표기 필드(<code>credit</code>)를 필수로 둔다. 위키미디어 공용의 CC 라이선스 자료를 우선 수집한다.</li>
+    <li>교사 설정에 <em>외부 이미지 불러오기</em> 스위치를 둔다. 외부 접속이 차단된 학교망에서는 꺼두면 로컬 파일과 대체 카드만 쓴다.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§4</span>혼자 플레이</h2>
+  <p class="lede">
+    수업 중 1인 1기기와 가정 예습·복습, 두 상황을 모두 지원한다.
+    앞은 <strong>50분 안에 끝나고 교사가 결과를 걷을 수 있어야</strong> 하고,
+    뒤는 <strong>반복해도 질리지 않을 장기 목표</strong>가 있어야 한다.
+  </p>
+
+  <h3>진입 조건 완화 <span class="tag">minimum</span></h3>
+  <ul>
+    <li>학생 이름 최소 인원을 2명에서 <strong>1명</strong>으로 낮춘다.</li>
+    <li>설정 1단계에 <strong>모둠 플레이 / 혼자 플레이</strong> 선택을 추가한다. 혼자 플레이를 고르면 이름 입력이 1칸으로 시작한다.</li>
+    <li>1인일 때 UI 문구를 바꾼다. “이번 차례 · 김지호” → “<strong>김지호의 여행</strong>”. 차례를 넘기는 개념이 없으므로 순번 표시도 감춘다.</li>
+    <li>리포트의 ‘모둠명’은 ‘여행자명’으로 자동 전환한다.</li>
+  </ul>
+
+  <h3>여행 목표 카드 <span class="tag">goals</span></h3>
+  <p>
+    1인전은 경쟁 상대가 없어 동기가 약해진다. 게임 시작 시 <strong>목표 카드 3장</strong>을 무작위로 제시해
+    “무엇을 노리고 굴릴 것인가”를 만든다. 모둠전에도 그대로 적용해 두 모드의 규칙을 통일한다.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>목표 예시</th><th>학습 의도</th><th>보너스</th></tr></thead>
+      <tbody>
+        <tr><td>서로 다른 <b>3개 권역</b>에서 스탬프 받기</td><td>권역 개념의 체득</td><td class="num">+40</td></tr>
+        <tr><td>적도에서 <b>위도 10° 이내</b> 도시 방문</td><td>위도와 기후의 연결</td><td class="num">+40</td></tr>
+        <tr><td>인구 <b>2,000만 이상</b> 도시 방문</td><td>거대도시권 인식</td><td class="num">+30</td></tr>
+        <tr><td><b>해발 1,000m 이상</b> 고원 도시 방문</td><td>고도와 기온의 관계</td><td class="num">+40</td></tr>
+        <tr><td><b>항구 기능</b> 도시 2곳 스탬프</td><td>도시 기능의 유형화</td><td class="num">+30</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    목표 판정에는 좌표·인구·해발 같은 <strong>수치 데이터</strong>가 필요하다. §5의 데이터 확장이 이 기능의 전제가 된다.
+  </p>
+
+  <h3>수업 중 1인 1기기 — 결과 수합 <span class="tag">classroom</span></h3>
+  <p>
+    기기가 6대에서 30대로 늘면 “저장된 결과 비교” 화면만으로는 부족하다. 학생 손을 거쳐 교사에게 도달할 경로를 만든다.
+  </p>
+  <ul>
+    <li><strong>결과 요약 코드</strong> — 리포트에서 한 줄 텍스트를 복사한다. 예: <code>1-3 | 김지호 | 445점 | 스탬프10 | 권역1</code>. 학생이 구글 설문·패들렛·클래스룸에 붙여넣으면 교사가 표로 취합할 수 있다.</li>
+    <li>기존 텍스트 파일 저장·인쇄 기능은 그대로 두어, 네트워크 없이 종이로 걷는 운영도 가능하게 한다.</li>
+    <li>교사 설정에 <strong>세션 코드</strong>(예: <code>0817-3반</code>)를 입력해 두면 모든 결과에 자동으로 붙어, 반별 취합이 쉬워진다.</li>
+  </ul>
+
+  <h3>가정 학습 — 누적되는 여권 <span class="tag">at home</span></h3>
+  <ul>
+    <li><strong>수집률</strong>을 1급 지표로 올린다. “48개 도시 중 12개 발견 · 스탬프 8개”가 시작 화면에 항상 보인다.</li>
+    <li><strong>개인 기록</strong> — 최고 점수, 최다 스탬프, 최다 권역 완성, 누적 플레이 횟수. 판마다 리셋되지 않는다.</li>
+    <li><strong>오늘의 도시</strong> — 접속할 때마다 아직 발견하지 않은 도시 하나를 추천한다. 하루 3분짜리 복습 습관을 만드는 장치.</li>
+    <li>아틀라스 미션으로 얻은 스탬프도 같은 여권에 쌓이므로, 게임을 하지 않는 날에도 진도가 나간다.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§5</span>데이터 모델 확장</h2>
+  <p class="lede">
+    기존 필드는 하나도 버리지 않고 세 묶음을 더한다.
+    수치 필드가 생기면 목표 카드 판정, 정렬·필터, 기후 그래프, 도시 비교가 한꺼번에 가능해진다.
+  </p>
+
+<pre><code><span class="c-com">// 기존 필드(city, country, climate, industry …)는 그대로 두고 추가</span>
+{
+  <span class="c-key">images</span>: [
+    { src: <span class="c-str">"assets/cities/seoul-01.jpg"</span>,
+      caption: <span class="c-str">"경복궁 근정전"</span>, credit: <span class="c-str">"직접 촬영"</span> },
+    { src: <span class="c-str">"https://upload.wikimedia.org/…/Seoul_skyline.jpg"</span>,
+      caption: <span class="c-str">"한강과 도심"</span>, credit: <span class="c-str">"Wikimedia Commons, CC BY-SA 4.0"</span> }
+  ],
+
+  <span class="c-key">stats</span>: {                      <span class="c-com">// 목표 카드 판정 · 정렬 · 그래프의 근거</span>
+    population:  <span class="c-num">9500000</span>,       <span class="c-com">// 숫자 (기존 populationScale은 문장으로 유지)</span>
+    elevation:   <span class="c-num">38</span>,            <span class="c-com">// 해발 m</span>
+    climateZone: <span class="c-str">"Dwa"</span>,          <span class="c-com">// 쾨펜 기후 구분</span>
+    tempJan: <span class="c-num">-2.4</span>, tempJul: <span class="c-num">25.7</span>,  <span class="c-com">// °C</span>
+    annualRain:  <span class="c-num">1400</span>           <span class="c-com">// mm</span>
+  },
+
+  <span class="c-key">functions</span>: [<span class="c-str">"수도"</span>, <span class="c-str">"금융"</span>, <span class="c-str">"문화"</span>],   <span class="c-com">// 도시 기능 유형(필터·목표 판정용)</span>
+  <span class="c-key">related</span>:   [<span class="c-str">"tokyo"</span>, <span class="c-str">"beijing"</span>]        <span class="c-com">// 비교하면 좋은 도시 추천</span>
+}</code></pre>
+
+  <h3>파일 구조 <span class="tag">refactor</span></h3>
+  <p>
+    <code>script.js</code>는 이미 <strong>207KB</strong>다. 이미지 배열과 수치가 붙으면 300KB를 넘고,
+    교사가 도시 내용을 직접 고치기도 어려워진다.
+    도시 데이터만 <code>data.js</code>로 분리할 것을 제안한다 —
+    빌드 도구 없이 <code>&lt;script&gt;</code> 태그 하나를 더 얹는 것이므로 “빌드 없음” 원칙은 유지된다.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>파일</th><th>역할</th><th>주 편집자</th></tr></thead>
+      <tbody>
+        <tr><td class="num">index.html</td><td>화면 골격</td><td>개발</td></tr>
+        <tr><td class="num">style.css</td><td>디자인</td><td>개발</td></tr>
+        <tr><td class="num">script.js</td><td>게임 엔진 · 지도 엔진 · UI</td><td>개발</td></tr>
+        <tr><td class="num">data.js <b>(신규)</b></td><td>도시 48개 · 퀴즈 · 카드 · 지도 좌표</td><td><b>교사도 편집 가능</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§6</span>화면 구조</h2>
+  <p class="lede">현재 8개 화면을 세 갈래로 재배치한다. 순수 신규는 아틀라스와 도시 비교뿐이고, 나머지는 이동·통합이다.</p>
+
+  <div class="tree">
+    <div class="tree-root">시작 화면 — 수집률과 이어하기를 항상 표시</div>
+    <div class="branches">
+      <div class="branch" style="--c: var(--sea)">
+        <h5>월드 아틀라스</h5>
+        <div class="note">Explore</div>
+        <ul>
+          <li><b>지도 뷰</b> — 48개 핫스팟<span class="new">NEW</span></li>
+          <li><b>목록 뷰</b> — 기존 도감 흡수</li>
+          <li>도시 상세 패널 (탭 5개)</li>
+          <li>도시 비교 (2~3개)<span class="new">NEW</span></li>
+        </ul>
+      </div>
+      <div class="branch" style="--c: var(--tan)">
+        <h5>보드게임</h5>
+        <div class="note">Play</div>
+        <ul>
+          <li>모둠 플레이 / <b>혼자 플레이</b><span class="new">NEW</span></li>
+          <li>설정 — 시간 · 인원 · 말</li>
+          <li>게임 보드 (중앙 지도 → 아틀라스 연결)</li>
+          <li>결과 리포트 + 요약 코드<span class="new">NEW</span></li>
+        </ul>
+      </div>
+      <div class="branch" style="--c: var(--lowland)">
+        <h5>나의 여권</h5>
+        <div class="note">Collect</div>
+        <ul>
+          <li>스탬프 수집 현황 (48개)</li>
+          <li><b>개인 최고 기록</b><span class="new">NEW</span></li>
+          <li>모둠 결과 비교 (기존)</li>
+          <li>오늘의 도시<span class="new">NEW</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p style="margin-top:18px">
+    교사 설정과 게임 방법은 시작 화면 하단의 작은 링크로 내린다. 학생이 매번 마주칠 필요가 없는 화면이기 때문이다.
+    보드 중앙의 지도는 그대로 두되, 클릭하면 전체 아틀라스가 열리는 <strong>미니맵</strong> 역할을 준다.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§7</span>단계별 로드맵</h2>
+  <p class="lede">
+    각 단계가 끝날 때마다 <strong>그 자체로 수업에 쓸 수 있는 상태</strong>가 되도록 끊었다.
+    중간에 멈춰도 손해가 없다.
+  </p>
+
+  <div class="phases">
+    <div class="phase" style="--c: var(--sea)">
+      <div class="stage"><div class="n">1</div><div class="l">Atlas</div></div>
+      <div>
+        <h4>지도로 도시를 만난다</h4>
+        <ul>
+          <li>정밀 세계지도 재작성, 확대·이동·권역 프레이밍</li>
+          <li>월드 아틀라스 화면 + 48개 핫스팟 + 상세 패널(탭 5개)</li>
+          <li>이미지 갤러리 — 로컬 · 외부 URL · 대체 카드 3단 폴백</li>
+          <li>도감을 아틀라스 목록 뷰로 통합</li>
+        </ul>
+        <p class="why">이 단계만으로도 “48개 도시 자료집”이 완성된다. 게임 없이 수업 자료로 바로 쓸 수 있다.</p>
+      </div>
+    </div>
+
+    <div class="phase" style="--c: var(--tan)">
+      <div class="stage"><div class="n">2</div><div class="l">Solo</div></div>
+      <div>
+        <h4>혼자서도 완주한다</h4>
+        <ul>
+          <li>1인 허용, 모둠/혼자 모드 선택, 1인용 문구 전환</li>
+          <li>여행 목표 카드 3장 + 판정 로직</li>
+          <li>아틀라스 미션으로도 스탬프 획득 — 두 통로 연결</li>
+          <li>개인 최고 기록 · 누적 수집률 보드</li>
+        </ul>
+        <p class="why">수업 중 1인 1기기와 가정 복습이 동시에 열린다. §5의 <code>stats</code> 필드가 선행되어야 한다.</p>
+      </div>
+    </div>
+
+    <div class="phase" style="--c: var(--lowland)">
+      <div class="stage"><div class="n">3</div><div class="l">Compare</div></div>
+      <div>
+        <h4>도시를 견주어 본다</h4>
+        <ul>
+          <li>도시 데이터에 수치 필드 · 기능 태그 추가, <code>data.js</code> 분리</li>
+          <li>도시 비교 화면 — 2~3개 도시를 나란히</li>
+          <li>기온·강수 그래프, 인구·해발 정렬 및 필터</li>
+          <li>결과 요약 코드 · 세션 코드</li>
+        </ul>
+        <p class="why">「도시의 미래탐구」의 분석 활동으로 넘어가는 다리. 학기 초 흥미 유발을 넘어 본 수업에서도 쓰인다.</p>
+      </div>
+    </div>
+
+    <div class="phase" style="--c: var(--upland)">
+      <div class="stage"><div class="n">4</div><div class="l">Optional</div></div>
+      <div>
+        <h4>운영을 다듬는다</h4>
+        <ul>
+          <li>오늘의 도시 추천</li>
+          <li>학습지 인쇄 양식 (도시 카드 → A4 워크시트)</li>
+          <li>교사용 문항 난이도 조절 · 권역 범위 제한</li>
+        </ul>
+        <p class="why">수업에서 실제로 써 본 뒤 필요한 것만 고른다. 지금 확정하지 않는다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§8</span>지킬 것과 걱정할 것</h2>
+
+  <h3>1.0에서 그대로 가져가는 원칙 <span class="tag">constraints</span></h3>
+  <div class="rules">
+    <div class="rule"><div class="h">빌드 도구 없음</div><div class="d">HTML · CSS · Vanilla JS. <code>data.js</code> 한 개만 추가한다.</div></div>
+    <div class="rule"><div class="h">서버 · 로그인 없음</div><div class="d">모든 기록은 <code>localStorage</code>에만. 학생 이름은 기기 밖으로 나가지 않는다.</div></div>
+    <div class="rule"><div class="h">외부 지도 API 없음</div><div class="d">세계지도는 SVG로 직접 그린다. 정밀도만 올린다.</div></div>
+    <div class="rule"><div class="h">이미지는 있으면 좋은 것</div><div class="d">한 장도 없어도 모든 기능이 동작한다.</div></div>
+    <div class="rule"><div class="h">실시간 통신 없음</div><div class="d">모둠 간 연결·거래는 계속 만들지 않는다.</div></div>
+    <div class="rule"><div class="h">PC · 태블릿 우선</div><div class="d">Chrome · Edge 기준, 모바일에서도 핵심 기능 동작.</div></div>
+  </div>
+
+  <h3>위험 요소와 대응 <span class="tag">risk</span></h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>위험</th><th>대응</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>외부 이미지 링크가 깨지거나 학교망에서 차단</b></td>
+          <td>개별 실패는 조용히 제외, 전체는 교사 설정에서 끄기. 핵심 도시는 로컬 파일을 우선 확보한다.</td>
+        </tr>
+        <tr>
+          <td><b>정밀 지도 좌표 작업량</b></td>
+          <td>대륙 단위로 나누어 진행하고, 미완성 대륙은 기존 개략 폴리곤을 그대로 쓴다. 지도가 절대 비지 않는다.</td>
+        </tr>
+        <tr>
+          <td><b>이미지 저작권</b></td>
+          <td><code>credit</code> 필드를 필수로 하고 상세 패널에 항상 노출. 위키미디어 CC 자료를 우선 수집한다.</td>
+        </tr>
+        <tr>
+          <td><b>아틀라스가 게임을 대체해 버림</b></td>
+          <td>아틀라스 미션 스탬프는 게임과 같은 값이되, <b>권역 완성 보너스와 목표 카드는 게임에서만</b> 얻게 해 역할을 나눈다.</td>
+        </tr>
+        <tr>
+          <td><b>기능이 늘어 첫 화면이 복잡해짐</b></td>
+          <td>진입점을 3개로 고정한다. 새 기능은 반드시 세 축 중 하나에 소속시키고, 시작 화면 버튼은 늘리지 않는다.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<section>
+  <h2><span class="no">§9</span>다음 결정</h2>
+  <p>착수 전에 정해야 할 것은 두 가지다.</p>
+  <ol>
+    <li><strong>1단계를 어디까지 한 번에 만들 것인가</strong> — 정밀 지도와 아틀라스 화면을 함께 갈지, 아틀라스 화면을 현재 개략 지도로 먼저 띄우고 지도 정밀화를 뒤로 뺄지. 후자가 빨리 써볼 수 있다.</li>
+    <li><strong>이미지 수집을 누가 언제 할 것인가</strong> — 48개 도시 × 2~4장이면 100~190장이다. 우선 <strong>보드에 자주 오르는 도시</strong>와 <strong>필수 24개 도시</strong>부터 채우고 나머지는 대체 카드로 두는 방식을 권한다.</li>
+  </ol>
+</section>
+
+<div class="colophon">
+  <span>CITY PASSPORT 2.0 · REDESIGN PROPOSAL</span>
+  <span>기준 버전 1.0.0 (도시 48 · 보드 32칸 · 문항 112)</span>
+  <span>2026-08-17</span>
+</div>
+
+</div>
