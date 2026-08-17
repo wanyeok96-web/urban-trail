@@ -25,14 +25,8 @@
         <button type="button" class="site-nav-btn" data-act="nav-play" data-nav="play" data-tutorial="nav-play">어반 런</button>
         <button type="button" class="site-nav-btn" data-act="open-passport" data-nav="passport" data-tutorial="nav-passport">트레일 로그</button>
       </nav>
-      <div class="site-header-tools" data-tutorial="sfx">
-        <button type="button" class="office-entry" data-act="open-office" data-tutorial="office" title="관리실">관리실</button>
-        <label class="switch on-light" title="효과음">
-          <input type="checkbox" id="toggle-sfx-header">
-          <span class="switch-track"><span class="switch-thumb"></span></span>
-          <span class="switch-label sr-only">효과음</span>
-        </label>
-        <input type="range" id="vol-sfx-header" class="slider on-light" min="0" max="100" step="5" aria-label="효과음 음량">
+      <div class="site-header-tools">
+        <button type="button" class="office-entry" data-act="open-office" title="관리실">관리실</button>
       </div>
     </div>
     <div class="site-route-strip" aria-hidden="true"></div>
@@ -53,9 +47,9 @@
             탐험 · 플레이 · 기록 — 세 가지 길로 세계 48개 도시를 만납니다.
           </p>
           <div class="hero-cta">
-            <button type="button" class="btn btn-light" data-act="open-student-guide" data-tutorial="guide-student">🎒 학생용 가이드</button>
-            <button type="button" class="btn btn-light" data-act="open-teacher-guide" data-tutorial="guide-teacher">🧑‍🏫 교사용 가이드</button>
-            <button type="button" class="btn btn-light" data-act="start-tutorial" data-tutorial="guide-tutorial">💡 화면 안내</button>
+            <button type="button" class="btn btn-light" data-act="open-office" data-tutorial="office">🗂️ 관리실</button>
+            <button type="button" class="btn btn-light" data-act="open-guide" data-tutorial="guide-hub">📘 가이드</button>
+            <button type="button" class="btn btn-light" data-act="start-tutorial" data-tutorial="guide-tutorial">💡 튜토리얼</button>
           </div>
         </div>
         <div class="hero-map">
@@ -75,7 +69,7 @@
             <span class="route-ico">🗺️</span>
             <span class="route-k">Explore</span>
             <span class="route-t">트레일 맵</span>
-            <span class="route-s">48개 도시를 지도·목록에서 탐험</span>
+            <span class="route-s">도시 학습 대시보드로 48개 도시를 탐험</span>
             <span class="route-go">바로가기 →</span>
           </button>
           <button type="button" class="route-card" data-act="nav-play" data-tutorial="route-play">
@@ -218,7 +212,7 @@
         <div class="game-top-actions">
           <button class="btn btn-ghost btn-sm" data-act="go-title">← 홈</button>
           <button class="btn btn-ghost btn-sm" data-act="open-atlas">🗺️ 트레일 맵</button>
-          <button class="btn btn-ghost btn-sm" data-act="open-student-guide">🎒 가이드</button>
+          <button class="btn btn-ghost btn-sm" data-act="open-guide">📘 가이드</button>
           <button class="btn btn-ghost btn-sm" data-act="save-quit">💾 저장 후 나가기</button>
           <button class="btn btn-outline btn-sm" data-act="finish-now">🏁 여행 마치기</button>
         </div>
@@ -400,17 +394,14 @@
   </section>
 
 
-  <!-- ================================================================
-       화면 6 · 학생용 가이드
-       ================================================================ -->
-  <section id="screen-student-guide" class="screen">
-    <div class="page">
-      <div class="page-head no-print">
-        <h2 class="page-title"><small>STUDENT</small>학생용 가이드</h2>
-        <button class="btn btn-ghost btn-sm" data-act="go-back">← 돌아가기</button>
+  <div id="sheet-park" hidden>
+    <div id="guide-sheet">
+      <div class="guide-modal-nav" role="tablist" aria-label="가이드 종류">
+        <button type="button" class="guide-tab is-on" data-guide-tab="student" role="tab" aria-selected="true">학생용 가이드</button>
+        <button type="button" class="guide-tab" data-guide-tab="teacher" role="tab" aria-selected="false">교사용 가이드</button>
       </div>
-
-      <div class="panel teacher-guide">
+      <div id="guide-pane-student" class="guide-pane" data-guide-pane="student">
+<div class="panel teacher-guide">
         <p class="setup-sub" style="margin-bottom:18px">
           서버·로그인 없이 이 태블릿에서 바로 플레이합니다. 아래 순서대로 여행을 시작해 보세요.
         </p>
@@ -419,7 +410,7 @@
         <div class="howto-steps">
           <div class="howto-step"><div class="hn"></div><div>
             <div class="ht">세 가지 길을 알아 두세요</div>
-            <div class="hs"><b>트레일 맵</b>은 세계 지도를 탐험하고, <b>어반 런</b>은 주사위 보드게임이며,
+            <div class="hs"><b>트레일 맵</b>은 세계 지도에서 도시 학습 대시보드로 탐험하고, <b>어반 런</b>은 주사위 보드게임이며,
             <b>트레일 로그</b>는 모은 스탬프를 보는 기록장입니다.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
@@ -432,7 +423,7 @@
             <div class="hs">한 번 굴릴 때마다 1턴이 줄어듭니다. 화면에 <b>지금 주사위</b>가 적힌 친구가 굴리세요.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
-            <div class="ht">도착한 도시 카드를 함께 읽습니다</div>
+            <div class="ht">도착한 도시 학습 대시보드를 함께 읽습니다</div>
             <div class="hs">위치·기후·인구·산업·문화를 소리 내어 읽습니다. 처음 방문하면 <b>+10점</b>.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
@@ -455,21 +446,9 @@
           이미 스탬프를 받은 도시에 다시 도착하면 재방문 보너스(+5)를 받고 다음 친구에게 순서가 넘어갑니다.
         </div>
       </div>
-    </div>
-  </section>
-
-
-  <!-- ================================================================
-       화면 6b · 교사용 가이드
-       ================================================================ -->
-  <section id="screen-teacher-guide" class="screen">
-    <div class="page">
-      <div class="page-head no-print">
-        <h2 class="page-title"><small>TEACHER</small>교사용 가이드</h2>
-        <button class="btn btn-ghost btn-sm" data-act="go-back">← 돌아가기</button>
       </div>
-
-      <div class="panel teacher-guide">
+      <div id="guide-pane-teacher" class="guide-pane" data-guide-pane="teacher" hidden>
+<div class="panel teacher-guide">
         <p class="setup-sub" style="margin-bottom:18px">
           선생님은 <b>사용법을 안내하고, 수업 중 활동을 이끌며, 결과(PDF)를 확인</b>하시면 됩니다.
           서버·로그인 없이 태블릿에서 바로 사용합니다.
@@ -501,26 +480,27 @@
             <li>홈 화면의 세 가지를 가리킵니다. 「지도 보기는 <b>트레일 맵</b>, 주사위 게임은 <b>어반 런</b>, 스탬프 모으기는 <b>트레일 로그</b>예요.」</li>
             <li>「오늘은 홈의 <b>어반 런</b>을 누릅니다. 친구와 함께인지, 혼자 하기인지 고르세요.」</li>
             <li>「학급과 팀 이름, 친구 이름을 적고 여행 말을 고르면 보드가 나와요.」</li>
-            <li>「화면에 <b>지금 주사위</b>가 적힌 친구가 굴립니다. 도착한 도시 카드를 <b>소리 내어 읽고</b>, 랜드마크 미션은 상의해서 답하세요.」</li>
+            <li>「화면에 <b>지금 주사위</b>가 적힌 친구가 굴립니다. 도착한 도시 학습 대시보드를 <b>소리 내어 읽고</b>, 랜드마크 미션은 상의해서 답하세요.」</li>
             <li>「턴이 끝나면 성찰을 적고, 노란 버튼 <b>제출용 PDF 저장</b>을 눌러 선생님께 제출합니다.」</li>
           </ol>
-          처음 쓰는 반이라면 홈의 <b>💡 화면 안내</b>를 프로젝터로 한 번 같이 넘겨 보세요.
+          처음 쓰는 반이라면 홈의 <b>💡 튜토리얼</b>을 프로젝터로 한 번 같이 넘겨 보세요.
         </div>
 
         <h3 class="sec-title">3. 수업 중 활동 아이디어</h3>
         <div class="howto-steps">
           <div class="howto-step"><div class="hn"></div><div>
-            <div class="ht">도시 카드 함께 읽기</div>
+            <div class="ht">도시 학습 대시보드 함께 읽기</div>
             <div class="hs">한 명이 위치·기후를 읽고, 다른 친구가 「이 도시는 어느 대륙일까?」를 맞혀 보게 합니다.
             정보를 읽지 않고 미션만 풀면 학습 효과가 떨어집니다.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
             <div class="ht">미션은 상의 후 한 번만</div>
-            <div class="hs">답을 고르기 전에 팀에서 근거를 말하게 합니다. 「카드에 나온 산업·랜드마크를 보고 고르자」고 안내하세요.</div>
+            <div class="hs">답을 고르기 전에 팀에서 근거를 말하게 합니다. 「대시보드에 나온 산업·랜드마크를 보고 고르자」고 안내하세요.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
             <div class="ht">지도로 다시 찾기</div>
-            <div class="hs">게임 중간에 상단 <b>트레일 맵</b>으로 가서, 방금 방문한 도시를 확대·검색해 위치를 확인하게 합니다.
+            <div class="hs">게임 중간에 상단 <b>트레일 맵</b>으로 가서, 방금 방문한 도시를 누르면
+            게임과 같은 <b>도시 학습 대시보드</b>가 열립니다. 자연·인문·이야기 탭과 미션으로 다시 학습하게 하세요.
             도시 비교로 인구·해발·기후를 나란히 보게 할 수도 있습니다.</div>
           </div></div>
           <div class="howto-step"><div class="hn"></div><div>
@@ -535,9 +515,9 @@
           <table class="compare-table">
             <thead><tr><th>시간</th><th>선생님</th><th>학생</th></tr></thead>
             <tbody>
-              <tr><td>5분</td><td>화면 안내·세 메뉴 소개</td><td>같이 보며 버튼 위치 확인</td></tr>
+              <tr><td>5분</td><td>튜토리얼·세 메뉴 소개</td><td>같이 보며 버튼 위치 확인</td></tr>
               <tr><td>5분</td><td>팀 편성·태블릿 배부 확인</td><td>어반 런 → 팀 정보 입력</td></tr>
-              <tr><td>25~30분</td><td>순회하며 읽기·상의 독려</td><td>주사위·도시 카드·미션</td></tr>
+              <tr><td>25~30분</td><td>순회하며 읽기·상의 독려</td><td>주사위·도시 학습 대시보드·미션</td></tr>
               <tr><td>7분</td><td>PDF 저장 방법 한 번 더 안내</td><td>성찰 작성 · 제출용 PDF 저장</td></tr>
               <tr><td>5분</td><td>인상 깊은 도시 발표 진행</td><td>한 문장 공유</td></tr>
             </tbody>
@@ -561,64 +541,29 @@
           <button type="button" class="btn btn-light" data-act="print-teacher-guide">🖨️ 이 안내 인쇄</button>
         </div>
       </div>
-    </div>
-  </section>
-
-
-  <!-- ================================================================
-       화면 6b · 선생님 설정
-       ================================================================ -->
-  <section id="screen-teacher" class="screen">
-    <div class="page">
-      <div class="page-head">
-        <h2 class="page-title"><small>TEACHER</small>선생님 설정</h2>
-        <button class="btn btn-ghost btn-sm" data-act="open-teacher-guide">← 교사용 가이드</button>
-      </div>
-      <div class="panel">
-        <div class="set-list" id="teacher-settings"></div>
-        <div class="note-box">
-          <h4>50분 수업 운영 예시</h4>
-          도입 5분(게임 소개·팀 편성) → 설정 5분(팀 정보·말 선택) → 플레이 25~30분(기본 탐험 15턴) →
-          리포트·PDF 저장 7분 → 마무리 5분(인상 깊은 도시 발표).<br>
-          태블릿 한 대당 한 팀이며, 친구들이 돌아가며 주사위를 굴립니다. 학생은 <b>제출용 PDF</b>를 저장하고,
-          선생님은 각 기기의 PDF 또는 <b>이 기기에 저장된 여행 기록</b>으로 확인하세요. 기기끼리 자동 합산되지 않습니다.
-          <div style="margin-top:10px">
-            <button type="button" class="btn btn-light btn-sm" data-act="open-teacher-guide">← 교사용 가이드로</button>
-          </div>
-        </div>
       </div>
     </div>
-  </section>
-
-
-  <!-- ================================================================
-       화면 8 · 이 기기 여행 기록
-       ================================================================ -->
-  <section id="screen-results" class="screen">
-    <div class="page">
-      <div class="page-head">
-        <h2 class="page-title"><small>THIS DEVICE</small>이 기기에 저장된 여행 기록</h2>
-        <button class="btn btn-ghost btn-sm" data-act="open-teacher-guide">← 교사용 가이드</button>
-      </div>
-      <div class="panel">
-        <div id="results-body"></div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ================================================================
-       화면 9 · 관리실
-       ================================================================ -->
-  <section id="screen-office" class="screen">
-    <div class="page">
-      <div class="page-head">
-        <h2 class="page-title"><small>OFFICE</small>관리실</h2>
-        <button class="btn btn-ghost btn-sm" data-act="go-back">← 돌아가기</button>
-      </div>
-      <div class="panel">
+    <div id="office-sheet">
+<div class="panel">
         <h3 class="setup-h">이 기기의 이용자 정보</h3>
         <p class="setup-sub">학생 또는 선생님을 고르고, 학교·학년·반·이름을 적어 두세요. 다음 여행 준비 때 불러올 수 있습니다.</p>
+      </div>
+      <div class="panel" style="margin-top:14px" data-tutorial="office-sfx">
+        <h3 class="setup-h">이 기기 소리</h3>
+        <p class="setup-sub">주사위·버튼·정답·스탬프 효과음을 켜고 음량을 맞춥니다. 배경음악은 없습니다. 설정은 이 기기에만 저장됩니다.</p>
+        <div class="office-sfx">
+          <label class="switch on-light" title="효과음">
+            <input type="checkbox" id="toggle-sfx-office">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">효과음</span>
+          </label>
+          <div class="office-sfx-vol">
+            <label for="vol-sfx-office">음량</label>
+            <input type="range" id="vol-sfx-office" class="slider on-light" min="0" max="100" step="5" aria-label="효과음 음량">
+            <span id="vol-sfx-value">30%</span>
+          </div>
+          <button type="button" class="btn btn-light btn-sm" id="btn-sfx-test">들어보기</button>
+        </div>
       </div>
       <div class="panel" style="margin-top:14px">
         <div class="field" style="margin-bottom:16px">
@@ -666,7 +611,50 @@
         </div>
       </div>
     </div>
+  </div>
+
+
+  <!-- ================================================================
+       화면 6b · 선생님 설정
+       ================================================================ -->
+  <section id="screen-teacher" class="screen">
+    <div class="page">
+      <div class="page-head">
+        <h2 class="page-title"><small>TEACHER</small>선생님 설정</h2>
+        <button class="btn btn-ghost btn-sm" data-act="open-teacher-guide">← 교사용 가이드</button>
+      </div>
+      <div class="panel">
+        <div class="set-list" id="teacher-settings"></div>
+        <div class="note-box">
+          <h4>50분 수업 운영 예시</h4>
+          도입 5분(게임 소개·팀 편성) → 설정 5분(팀 정보·말 선택) → 플레이 25~30분(기본 탐험 15턴) →
+          리포트·PDF 저장 7분 → 마무리 5분(인상 깊은 도시 발표).<br>
+          태블릿 한 대당 한 팀이며, 친구들이 돌아가며 주사위를 굴립니다. 학생은 <b>제출용 PDF</b>를 저장하고,
+          선생님은 각 기기의 PDF 또는 <b>이 기기에 저장된 여행 기록</b>으로 확인하세요. 기기끼리 자동 합산되지 않습니다.
+          <div style="margin-top:10px">
+            <button type="button" class="btn btn-light btn-sm" data-act="open-teacher-guide">← 교사용 가이드로</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
+
+
+  <!-- ================================================================
+       화면 8 · 이 기기 여행 기록
+       ================================================================ -->
+  <section id="screen-results" class="screen">
+    <div class="page">
+      <div class="page-head">
+        <h2 class="page-title"><small>THIS DEVICE</small>이 기기에 저장된 여행 기록</h2>
+        <button class="btn btn-ghost btn-sm" data-act="open-teacher-guide">← 교사용 가이드</button>
+      </div>
+      <div class="panel">
+        <div id="results-body"></div>
+      </div>
+    </div>
+  </section>
+
 
 </div>
 

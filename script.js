@@ -12,7 +12,7 @@
  *  [G] 공통 UI 유틸 (화면 전환 / 모달 / 토스트)
  *  [H] 게임 상태 & 보드 생성
  *  [I] 턴 진행 (주사위 · 이동 · 칸 이벤트)
- *  [J] 도시 카드 · 퀴즈
+ *  [J] 도시 학습 대시보드 · 퀴즈
  *  [K] 특별 칸 이벤트
  *  [L] 결과 리포트
  *  [M] 트레일 맵 / 트레일 로그 / 선생님 설정 / 이 기기 기록
@@ -25,7 +25,7 @@
  * [A] 상수 · 권역 · 말 · 색상
  * ========================================================================= */
 
-var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.4.0" };
+var APP = { name: "URBAN TRAIL", tagline: "도시를 따라가는 지리 여행", version: "3.6.1" };
 
 /* 저장소 키 */
 var LS = {
@@ -624,8 +624,7 @@ var NAV_SCREEN_MAP = {
   "screen-compare": "atlas",
   "screen-passport": "passport",
   "screen-setup": "play",
-  "screen-game": "play",
-  "screen-office": "home"
+  "screen-game": "play"
 };
 
 function updateSiteNav(screenId) {
@@ -637,6 +636,11 @@ function updateSiteNav(screenId) {
 
 function showScreen(id, remember) {
   var cur = $(".screen.is-active");
+  if (cur && cur.id === id) {
+    updateSiteNav(id);
+    return;
+  }
+  closeModal(true);
   if (cur && cur.id === id) {
     updateSiteNav(id);
     return;
@@ -678,6 +682,15 @@ function dismissModal(opts) {
   if (opts && opts.onClose) opts.onClose();
   else if (busy && game && !game.finished) endTurn();
 }
+function parkModalSheets() {
+  var park = $("#sheet-park");
+  if (!park) return;
+  ["office-sheet", "guide-sheet"].forEach(function (id) {
+    var n = document.getElementById(id);
+    if (n && n.parentNode !== park) park.appendChild(n);
+  });
+}
+
 function openModal(opts) {
   closeModal(true);
   var back = el("div", "modal-back");
@@ -695,6 +708,7 @@ function openModal(opts) {
 
   var body = el("div", "modal-body");
   body.innerHTML = opts.body || "";
+  if (opts.mount) opts.mount(body, m);
   m.appendChild(body);
 
   if (opts.buttons && opts.buttons.length) {
@@ -714,13 +728,16 @@ function openModal(opts) {
   });
   $("#modal-root").appendChild(back);
   modalOpen = true;
-  window.setTimeout(function () {
-    var f = m.querySelector("button:not(.modal-x), input, textarea");
-    if (f) { try { f.focus(); } catch (e) {} }
-  }, 60);
+  if (opts.autofocus !== false) {
+    window.setTimeout(function () {
+      var f = m.querySelector("button:not(.modal-x), input, textarea");
+      if (f) { try { f.focus(); } catch (e) {} }
+    }, 60);
+  }
   return m;
 }
 function closeModal(silent) {
+  parkModalSheets();
   var root = $("#modal-root");
   if (root) root.innerHTML = "";
   modalOpen = false;
@@ -729,15 +746,32 @@ function closeModal(silent) {
 
 /* 확인 대화상자 */
 function confirmDialog(title, message, onYes, yesLabel) {
-  openModal({
-    title: title, eyebrow: "확인", size: "narrow",
-    body: "<p style='font-size:.93rem;line-height:1.7;color:var(--ink-700)'>" + message + "</p>",
-    onClose: function () {},
-    buttons: [
-      { label: "취소", cls: "btn-light", act: function () { closeModal(); } },
-      { label: yesLabel || "확인", cls: "btn-navy", act: function () { closeModal(); onYes(); } }
-    ]
+  var root = $("#modal-root");
+  if (!root) return;
+  var back = el("div", "modal-back is-nested");
+  var m = el("div", "modal narrow");
+  var head = el("div", "modal-head");
+  head.innerHTML = "<div><div class='eyebrow'>확인</div><h3>" + esc(title) + "</h3></div>";
+  m.appendChild(head);
+  var body = el("div", "modal-body");
+  body.innerHTML = "<p style='font-size:.93rem;line-height:1.7;color:var(--ink-700)'>" + message + "</p>";
+  m.appendChild(body);
+  var foot = el("div", "modal-foot");
+  var cancel = el("button", "btn btn-light", "취소");
+  var ok = el("button", "btn btn-navy", yesLabel || "확인");
+  function remove() {
+    if (back.parentNode) back.parentNode.removeChild(back);
+  }
+  cancel.addEventListener("click", function () { Sound.play("click"); remove(); });
+  ok.addEventListener("click", function () { Sound.play("click"); remove(); if (onYes) onYes(); });
+  foot.appendChild(cancel);
+  foot.appendChild(ok);
+  m.appendChild(foot);
+  back.appendChild(m);
+  back.addEventListener("mousedown", function (e) {
+    if (e.target === back) remove();
   });
+  root.appendChild(back);
 }
 
 /* 색종이 효과 */
@@ -1820,7 +1854,7 @@ function checkRegionClear(regionKey) {
 }
 
 /* =========================================================================
- * [J] 도시 카드 · 랜드마크 미션(퀴즈)
+ * [J] 도시 학습 대시보드 · 랜드마크 미션(퀴즈)
  * ========================================================================= */
 
 /* 도시 대표 이미지 영역 HTML (이미지가 없으면 대체 카드가 그대로 보인다) */
@@ -1877,6 +1911,7 @@ function cityDashTabHTML(c, tab) {
   var south = c.coordinates && c.coordinates.lat < 0;
   if (tab === "human") {
     return "<div class='info-grid'>" +
+      infoItem(c, "👥 인구 규모", c.populationScale + " — " + c.populationNote) +
       infoItem(c, "🏭 산업", c.industry) +
       infoItem(c, "🏙️ 도시 기능", c.urbanFunction) +
       infoItem(c, "🎎 문화", c.culture) +
@@ -1888,9 +1923,9 @@ function cityDashTabHTML(c, tab) {
     extra += "<div class='fact-box'><b>💡 알아 두면 재미있는 사실</b><br>" + esc(c.interestingFact) + "</div>";
     if (c.geoNote) extra += "<div class='fact-box geo-note'><b>🗺️ 지리로 한 걸음 더</b><br>" + esc(c.geoNote) + "</div>";
     if (c.countryFact) extra += "<div class='fact-box country-fact'><b>🌍 이 나라가 궁금하다면</b><br>" + esc(c.countryFact) + "</div>";
-    extra += "<div class='info-grid'>" + infoItem(c, "👥 인구 규모", c.populationScale + " — " + c.populationNote) + "</div>";
     return extra;
   }
+  if (tab === "mission") return atlasMissionHTML(c);
   var zone = st.climateZone || "";
   var zoneKo = KOEPPEN_KO[zone] || "";
   return "<div class='info-grid'>" +
@@ -1904,21 +1939,50 @@ function cityDashTabHTML(c, tab) {
     "</p>";
 }
 
-function cityDashboardHTML(c) {
+function atlasMissionHTML(c) {
+  if (stampHas(c.id)) {
+    return "<div class='quiz-result good'><span class='rt'>스탬프를 이미 받았어요</span>이 도시의 랜드마크 스탬프가 트레일 로그에 기록되어 있습니다.</div>";
+  }
+  var prog = atlasQuizDone[c.id] || [];
+  var html = "<p class='hint' style='margin-bottom:10px'>두 문항 모두 맞히면 랜드마크 스탬프를 받습니다. 게임과 같은 트레일 로그에 쌓입니다.</p>";
+  (c.quiz || []).forEach(function (q, qi) {
+    if (prog[qi]) {
+      html += "<div class='atlas-q is-done'><div class='aq'>" + (qi + 1) + ". " + esc(q.q) + "</div>" +
+        "<div class='quiz-result good' style='margin:0'>✓ 완료</div></div>";
+      return;
+    }
+    html += "<div class='atlas-q' data-qi='" + qi + "'><div class='aq'>" + (qi + 1) + ". " + esc(q.q) + "</div><div class='choices'>";
+    q.c.forEach(function (ch, ci) {
+      html += "<button type='button' class='choice' data-ci='" + ci + "'><span class='no'>" + (ci + 1) + "</span><span>" + esc(ch) + "</span></button>";
+    });
+    html += "</div><div class='aq-fb'></div></div>";
+  });
+  return html;
+}
+
+function cityDashboardHTML(c, opts) {
+  opts = opts || {};
+  var tab = opts.tab || "nature";
+  var extraTabs = opts.extraTabs || [];
   var st = cityStats(c) || {};
   var chips = "<span class='chip chip-region' style='--c:" + c.continentColor + "'>" + esc(c.regionName) + "</span>";
   (c.keywords || []).forEach(function (k) { chips += "<span class='chip'>#" + esc(k) + "</span>"; });
   var climate = cityClimateHTML(c, true) ||
     "<div class='climate-block compact'><div class='cb-head'>기후</div><p class='cb-note'>" + esc(c.climate) + "</p></div>";
+  var tabs = [
+    { k: "nature", t: "자연" },
+    { k: "human", t: "인문" },
+    { k: "story", t: "이야기" }
+  ].concat(extraTabs);
+  var tabBtns = tabs.map(function (tb) {
+    return "<button type='button' class='cd-tab" + (tab === tb.k ? " is-on" : "") +
+      "' data-tab='" + tb.k + "' role='tab' aria-selected='" + (tab === tb.k ? "true" : "false") + "'>" +
+      tb.t + "</button>";
+  }).join("");
   return "" +
     "<div class='city-dash' style='--c:" + c.continentColor + "'>" +
       "<aside class='cd-left'>" +
         cityVisualHTML(c) +
-        "<div class='cd-id'>" +
-          "<div class='cd-city'>" + c.flag + " " + esc(c.city) + "</div>" +
-          "<div class='cd-country'>" + esc(c.country) + " · " + esc(c.regionName) + "</div>" +
-          "<span class='cd-land'>" + c.landmarkIcon + " " + esc(c.landmark) + "</span>" +
-        "</div>" +
         cityLocatorHTML(c) +
         "<div class='kw-row'>" + chips + "</div>" +
       "</aside>" +
@@ -1933,19 +1997,21 @@ function cityDashboardHTML(c) {
           climate +
           "<div class='cd-geo'><div class='k'>📍 위치와 지형</div><div class='v'>" + esc(c.geography) + "</div></div>" +
         "</div>" +
-        "<div class='cd-tabs' role='tablist'>" +
-          "<button type='button' class='cd-tab is-on' data-tab='nature' role='tab' aria-selected='true'>자연</button>" +
-          "<button type='button' class='cd-tab' data-tab='human' role='tab' aria-selected='false'>인문</button>" +
-          "<button type='button' class='cd-tab' data-tab='story' role='tab' aria-selected='false'>이야기</button>" +
-        "</div>" +
-        "<div class='cd-tab-body' id='cd-tab-body'>" + cityDashTabHTML(c, "nature") + "</div>" +
+        "<div class='cd-tabs' role='tablist'>" + tabBtns + "</div>" +
+        "<div class='cd-tab-body' id='cd-tab-body'>" + cityDashTabHTML(c, tab) + "</div>" +
       "</div>" +
     "</div>";
 }
 
-function bindCityDashTabs(root, c) {
+function bindCityDashTabs(root, c, opts) {
+  opts = opts || {};
   var body = root.querySelector("#cd-tab-body");
   if (!body) return;
+  function show(tab) {
+    body.innerHTML = cityDashTabHTML(c, tab);
+    if (tab === "mission") bindAtlasMission(root, c);
+    if (opts.onTab) opts.onTab(tab);
+  }
   $$(".cd-tab", root).forEach(function (btn) {
     btn.addEventListener("click", function () {
       var tab = btn.getAttribute("data-tab");
@@ -1955,7 +2021,35 @@ function bindCityDashTabs(root, c) {
         b.setAttribute("aria-selected", on ? "true" : "false");
       });
       Sound.play("click");
-      body.innerHTML = cityDashTabHTML(c, tab);
+      show(tab);
+    });
+  });
+  if (opts.tab === "mission") bindAtlasMission(root, c);
+}
+
+function bindAtlasMission(root, c) {
+  $$(".atlas-q", root).forEach(function (box) {
+    var qi = parseInt(box.getAttribute("data-qi"), 10);
+    var q = (c.quiz || [])[qi];
+    if (!q) return;
+    $$(".choice", box).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var ci = parseInt(btn.getAttribute("data-ci"), 10);
+        $$(".choice", box).forEach(function (x) { x.disabled = true; });
+        var fb = box.querySelector(".aq-fb");
+        if (ci === q.a) {
+          btn.classList.add("is-correct");
+          Sound.play("correct");
+          fb.innerHTML = "<div class='quiz-result good'><span class='rt'>정답입니다</span>" + esc(q.ex) + "</div>";
+          window.setTimeout(function () { onAtlasQuizCorrect(c, qi); }, 700);
+        } else {
+          btn.classList.add("is-wrong");
+          var right = $$(".choice", box)[q.a];
+          if (right) right.classList.add("is-correct");
+          Sound.play("wrong");
+          fb.innerHTML = "<div class='quiz-result bad'><span class='rt'>아쉬워요</span>" + esc(q.ex) + "</div>";
+        }
+      });
     });
   });
 }
@@ -2049,7 +2143,7 @@ function openQuiz(c) {
       attempt = 1;
       disabled.push(i);
       var hint = settings.showHint
-        ? "<br><span style='font-weight:700'>힌트</span> · 도시 카드의 <b>" + esc(c.keywords.join(", ")) + "</b> 를 떠올려 보세요."
+        ? "<br><span style='font-weight:700'>힌트</span> · 도시 학습 대시보드의 <b>" + esc(c.keywords.join(", ")) + "</b> 를 떠올려 보세요."
         : "";
       $("#quiz-feedback", m).innerHTML =
         "<div class='quiz-result bad'><span class='rt'>아쉬워요! 한 번 더 도전할 수 있습니다.</span>" +
@@ -2427,6 +2521,47 @@ function travelRank(stamps) {
   return { t: "첫 여행자", e: "🎒" };
 }
 
+function stampCardHTML(c, sub) {
+  if (!c) return "";
+  return "<div class='stamp-page' style='--c:" + c.continentColor + "'>" +
+    "<div class='sp-i'>" + c.landmarkIcon + "</div>" +
+    "<div class='sp-c'>" + esc(c.city) + "</div>" +
+    "<div class='sp-l'>" + esc(sub != null ? sub : c.landmark) + "</div>" +
+    "<div class='sp-f'>" + c.flag + "</div></div>";
+}
+
+/* 스탬프를 권역 단위로 묶어, 인쇄 때 권역 중간이 잘리지 않게 한다 */
+function stampsGroupedHTML(ids, subFn) {
+  var have = {};
+  (ids || []).forEach(function (id) { have[id] = true; });
+  var html = "";
+  REGIONS.forEach(function (r) {
+    var cities = CITIES.filter(function (c) { return c.region === r.key && have[c.id]; });
+    if (!cities.length) return;
+    html += "<div class='stamp-region' style='--c:" + r.color + "'>" +
+      "<div class='stamp-region-h'>" +
+        "<span class='sr-name'>" + esc(r.name) + "</span>" +
+        "<span class='sr-n'>" + cities.length + "곳</span></div>" +
+      "<div class='stamp-book'>";
+    cities.forEach(function (c) {
+      html += stampCardHTML(c, subFn ? subFn(c) : c.landmark);
+    });
+    html += "</div></div>";
+  });
+  return html;
+}
+
+function syncPrintAnswers() {
+  $$(".reflect-q").forEach(function (q) {
+    var ta = q.querySelector("textarea");
+    var out = q.querySelector(".print-answer");
+    if (!ta || !out) return;
+    var text = (ta.value || "").trim();
+    out.textContent = text || "(미작성)";
+    out.classList.toggle("is-empty", !text);
+  });
+}
+
 function isGameInProgress() {
   return !!(game && !game.finished);
 }
@@ -2496,7 +2631,7 @@ function renderReport() {
     "</div>";
 
   if (game.goals && game.goals.length) {
-    html += "<h3 class='sec-title'>🎯 여행 목표</h3><div class='goal-list'>";
+    html += "<section class='print-section is-keep'><h3 class='sec-title'>🎯 여행 목표</h3><div class='goal-list'>";
     game.goals.forEach(function (g) {
       var def = goalDef(g.id);
       if (!def) return;
@@ -2505,31 +2640,20 @@ function renderReport() {
         "<div><div class='g-t'>" + esc(def.title) + "</div>" +
         "<div class='g-b'>" + (g.done ? "달성 +" + def.bonus : "미달성") + "</div></div></div>";
     });
-    html += "</div>";
+    html += "</div></section>";
   }
 
   html += "<div class='report-summary-code teacher-only-block no-print'><strong>결과 요약 코드</strong> (선생님용)<br>" +
     esc(reportSummaryCode()) + "</div>";
 
-  /* 스탬프 여권 */
-  html += "<h3 class='sec-title'>📍 " + (solo ? "나의" : "우리 팀의") + " 스탬프 트레일</h3>";
-  if (game.stamped.length) {
-    html += "<div class='stamp-book'>";
-    game.stamped.forEach(function (id) {
-      var c = getCity(id);
-      html += "<div class='stamp-page' style='--c:" + c.continentColor + "'>" +
-        "<div class='sp-i'>" + c.landmarkIcon + "</div>" +
-        "<div class='sp-c'>" + esc(c.city) + "</div>" +
-        "<div class='sp-l'>" + esc(c.landmark) + "</div>" +
-        "<div class='sp-f'>" + c.flag + "</div></div>";
-    });
-    html += "</div>";
-  } else {
-    html += "<p class='hint'>이번 여행에서는 스탬프를 얻지 못했어요. 다음 여행에서 도전해 봅시다!</p>";
-  }
+  /* 스탬프 — 권역별 */
+  html += "<section class='print-section'><h3 class='sec-title'>📍 " + (solo ? "나의" : "우리 팀의") + " 스탬프 트레일</h3>";
+  var stampGroups = stampsGroupedHTML(game.stamped);
+  html += stampGroups || "<p class='hint'>이번 여행에서는 스탬프를 얻지 못했어요. 다음 여행에서 도전해 봅시다!</p>";
+  html += "</section>";
 
   /* 권역별 탐험률 */
-  html += "<h3 class='sec-title'>🗺️ 권역별 탐험 진행률</h3><div class='region-report'>";
+  html += "<section class='print-section is-keep'><h3 class='sec-title'>🗺️ 권역별 탐험 진행률</h3><div class='region-report'>";
   REGIONS.forEach(function (r) {
     var st = regionStat(r.key);
     var pct = st.total ? (st.done / st.total * 100) : 0;
@@ -2538,7 +2662,7 @@ function renderReport() {
       "<span class='rr-track'><span class='rr-fill' style='width:" + pct + "%'></span></span>" +
       "<span class='rr-num'>" + st.done + "/" + st.total + "</span></div>";
   });
-  html += "</div>";
+  html += "</div></section>";
 
   /* 여행 일지 · 사진 · 축제 (화면용, 제출 PDF에서는 생략) */
   if (game.journal.length || game.photos.length || game.festivals.length) {
@@ -2558,22 +2682,25 @@ function renderReport() {
     html += "</div>";
   }
 
-  /* 성찰 */
+  /* 성찰 — 문항별로 페이지가 갈리도록 (목록 전체를 한 덩어리로 묶지 않음) */
   var saved = game.report || {};
-  html += "<h3 class='sec-title'>✍️ 여행을 마치며 (성찰)</h3>";
+  html += "<section class='print-section'><h3 class='sec-title'>✍️ 여행을 마치며 (성찰)</h3>";
   html += "<div class='reflect-list'>";
   html += "<div class='reflect-q'><div class='rq'><span>Q1.</span> 가장 인상 깊었던 도시를 고르고, 그 까닭을 적어 봅시다.</div>" +
           "<div class='pick-fav no-print' id='fav-pick'></div>" +
           "<p class='print-only print-fav' id='print-fav'></p>" +
           "<textarea class='textarea' id='reflect-1' style='margin-top:8px' placeholder='예) 싱가포르가 인상 깊었다. 물이 부족한데도 기술로 해결한 점이 놀라웠다.'>" +
-          esc(saved.r1 || "") + "</textarea></div>";
+          esc(saved.r1 || "") + "</textarea>" +
+          "<div class='print-answer' aria-hidden='true'></div></div>";
   html += "<div class='reflect-q'><div class='rq'><span>Q2.</span> 오늘 만난 도시들 사이에서 발견한 <b>공통점</b>이나 <b>차이점</b>은 무엇인가요?</div>" +
           "<textarea class='textarea' id='reflect-2' placeholder='예) 큰 강이나 바다를 끼고 발달한 도시가 많았다. 반면 기후는 아주 달랐다.'>" +
-          esc(saved.r2 || "") + "</textarea></div>";
+          esc(saved.r2 || "") + "</textarea>" +
+          "<div class='print-answer' aria-hidden='true'></div></div>";
   html += "<div class='reflect-q'><div class='rq'><span>Q3.</span> 앞으로 <b>더 깊이 공부해 보고 싶은 도시나 주제</b>는 무엇인가요?</div>" +
           "<textarea class='textarea' id='reflect-3' placeholder='예) 해수면 상승 때문에 수도를 옮기는 자카르타에 대해 더 알아보고 싶다.'>" +
-          esc(saved.r3 || "") + "</textarea></div>";
-  html += "</div>";
+          esc(saved.r3 || "") + "</textarea>" +
+          "<div class='print-answer' aria-hidden='true'></div></div>";
+  html += "</div></section>";
 
   html += "</div>"; /* report-body */
   doc.innerHTML = html;
@@ -2599,6 +2726,7 @@ function renderReport() {
     });
   }
   updatePrintFav();
+  syncPrintAnswers();
 }
 
 function updatePrintFav() {
@@ -3212,7 +3340,7 @@ var atlas = {
   sort: "name",
   query: "",
   selected: null,
-  tab: "overview",
+  tab: "nature",
   imgIdx: 0,
   vb: { x: 0, y: 0, w: MAP_VIEW.w, h: MAP_VIEW.h },
   bound: false,
@@ -3670,7 +3798,7 @@ function selectAtlasCity(id) {
     return;
   }
   atlas.selected = id;
-  atlas.tab = "overview";
+  atlas.tab = "nature";
   atlas.imgIdx = 0;
   Sound.play("click");
   renderAtlasHotspots();
@@ -3719,176 +3847,15 @@ function renderAtlasList() {
   });
 }
 
-function galleryHTML(c) {
-  return "<div class='gallery' id='atlas-gallery' style='--c:" + c.continentColor + "'>" +
-    "<div class='city-visual'>" +
-      "<span class='cv-flag'>" + c.flag + "</span>" +
-      "<span class='cv-region'>" + esc(c.regionName) + "</span>" +
-      "<img class='cv-img' alt=''>" +
-      "<div class='cv-fallback'>" +
-        "<div class='cv-icon'>" + c.landmarkIcon + "</div>" +
-        "<div class='cv-city'>" + esc(c.city) + "</div>" +
-        "<div class='cv-country'>" + esc(c.country) + "</div>" +
-        "<span class='cv-landmark'>" + c.landmarkIcon + " " + esc(c.landmark) + "</span>" +
-      "</div>" +
-    "</div>" +
-    "<div class='gallery-credit' id='atlas-credit' hidden></div>" +
-    "<div class='gallery-nav' id='atlas-gal-nav' hidden>" +
-      "<button type='button' data-gal='-1' aria-label='이전 사진'>‹</button>" +
-      "<button type='button' data-gal='1' aria-label='다음 사진'>›</button>" +
-    "</div>" +
-  "</div>";
-}
-
-function mountAtlasGallery(c) {
-  var root = $("#atlas-gallery");
-  if (!root) return;
-  var visual = root.querySelector(".city-visual");
-  var img = root.querySelector(".cv-img");
-  var credit = $("#atlas-credit");
-  var nav = $("#atlas-gal-nav");
-  var cands = cityImageList(c).slice();
-  var live = [];
-  var idx = 0;
-
-  function show(i) {
-    if (!live.length) return;
-    idx = (i + live.length) % live.length;
-    atlas.imgIdx = idx;
-    var im = live[idx];
-    visual.classList.add("has-image");
-    img.src = im.src;
-    if (credit) {
-      var bits = [im.caption, im.credit].filter(Boolean);
-      credit.textContent = bits.join(" · ");
-      credit.hidden = !bits.length;
-    }
-    if (nav) nav.hidden = live.length < 2;
-  }
-  function failOver() {
-    if (!cands.length) {
-      visual.classList.remove("has-image");
-      img.removeAttribute("src");
-      if (credit) credit.hidden = true;
-      if (nav) nav.hidden = true;
-      return;
-    }
-    var next = cands.shift();
-    var probe = new Image();
-    probe.onload = function () {
-      if (probe.naturalWidth > 0) { live.push(next); show(live.length - 1); tryNext(); }
-      else failOver();
-    };
-    probe.onerror = failOver;
-    probe.src = next.src;
-  }
-  function tryNext() {
-    if (!cands.length) return;
-    var next = cands.shift();
-    var probe = new Image();
-    probe.onload = function () {
-      if (probe.naturalWidth > 0) {
-        live.push(next);
-        if (nav) nav.hidden = live.length < 2;
-      }
-      tryNext();
-    };
-    probe.onerror = tryNext;
-    probe.src = next.src;
-  }
-  failOver();
-  if (nav) {
-    nav.addEventListener("click", function (e) {
-      var b = e.target.closest("[data-gal]");
-      if (!b || !live.length) return;
-      Sound.play("click");
-      show(idx + parseInt(b.getAttribute("data-gal"), 10));
-    });
-  }
-}
-
-function atlasTabBody(c) {
-  var st = cityStats(c);
-  if (atlas.tab === "nature") {
-    return cityClimateHTML(c) +
-      "<div class='info-grid'>" +
-      infoItem(c, "📍 위치와 지형", c.geography) +
-      infoItem(c, "🌡️ 기후", c.climate) +
-      (st.climateZone ? infoItem(c, "🌐 쾨펜 기후", st.climateZone + (KOEPPEN_KO[st.climateZone] ? " · " + KOEPPEN_KO[st.climateZone] : "")) : "") +
-      "</div>" +
-      cityLocatorHTML(c);
-  }
-  if (atlas.tab === "human") {
-    return "<div class='info-grid'>" +
-      infoItem(c, "🏭 산업", c.industry) +
-      infoItem(c, "🏙️ 도시 기능", c.urbanFunction) +
-      infoItem(c, "🎎 문화", c.culture) +
-      "</div>";
-  }
-  if (atlas.tab === "story") {
-    var extra = "";
-    if (c.geoNote) extra += "<div class='fact-box geo-note'><b>🗺️ 지리로 한 걸음 더</b><br>" + esc(c.geoNote) + "</div>";
-    if (c.countryFact) extra += "<div class='fact-box country-fact'><b>🌍 이 나라가 궁금하다면</b><br>" + esc(c.countryFact) + "</div>";
-    return "<div class='info-grid'>" + infoItem(c, "📈 성장 배경", c.growthReason) + "</div>" +
-      "<div class='fact-box'><b>💡 알아 두면 재미있는 사실</b><br>" + esc(c.interestingFact) + "</div>" +
-      extra +
-      "<div class='kw-row'>" + c.keywords.map(function (k) { return "<span class='chip'>#" + esc(k) + "</span>"; }).join("") + "</div>";
-  }
-  if (atlas.tab === "mission") {
-    if (stampHas(c.id)) {
-      return "<div class='quiz-result good'><span class='rt'>스탬프를 이미 받았어요</span>이 도시의 랜드마크 스탬프가 트레일 로그에 기록되어 있습니다.</div>";
-    }
-    var prog = atlasQuizDone[c.id] || [];
-    var html = "<p class='hint' style='margin-bottom:10px'>두 문항 모두 맞히면 랜드마크 스탬프를 받습니다. 게임과 같은 트레일 로그에 쌓입니다.</p>";
-    (c.quiz || []).forEach(function (q, qi) {
-      if (prog[qi]) {
-        html += "<div class='atlas-q is-done'><div class='aq'>" + (qi + 1) + ". " + esc(q.q) + "</div>" +
-          "<div class='quiz-result good' style='margin:0'>✓ 완료</div></div>";
-        return;
-      }
-      html += "<div class='atlas-q' data-qi='" + qi + "'><div class='aq'>" + (qi + 1) + ". " + esc(q.q) + "</div><div class='choices'>";
-      q.c.forEach(function (ch, ci) {
-        html += "<button type='button' class='choice' data-ci='" + ci + "'><span class='no'>" + (ci + 1) + "</span><span>" + esc(ch) + "</span></button>";
-      });
-      html += "</div><div class='aq-fb'></div></div>";
-    });
-    return html;
-  }
-  var fnTags = (c.functions || []).map(function (f) {
-    return "<span class='chip fn-chip'>" + esc(f) + "</span>";
-  }).join("");
-  return "<div class='stat-cards'>" +
-    "<div class='stat-card'><span class='sk'>인구</span><span class='sv'>" + fmtPop(st.population) + "</span></div>" +
-    "<div class='stat-card'><span class='sk'>해발</span><span class='sv'>" + st.elevation + " m</span></div>" +
-    "<div class='stat-card'><span class='sk'>1월 기온</span><span class='sv'>" +
-      (st.tempJan != null ? st.tempJan + "°C" : "—") + "</span></div>" +
-    "<div class='stat-card'><span class='sk'>연간 강수</span><span class='sv'>" +
-      (st.annualRain != null ? st.annualRain + " mm" : "—") + "</span></div>" +
-    "</div>" +
-    (fnTags ? "<div class='fn-row'>" + fnTags + "</div>" : "") +
-    cityLocatorHTML(c) +
-    "<div class='info-grid'>" +
-    infoItem(c, "🗽 랜드마크", c.landmark) +
-    infoItem(c, "👥 인구 규모", c.populationScale + " — " + c.populationNote) +
-    infoItem(c, "📌 좌표", fmtCoord(c)) +
-    "</div>";
-}
-
 function renderAtlasPanel() {
   var panel = $("#atlas-panel");
   if (!panel) return;
   var c = atlas.selected ? getCity(atlas.selected) : null;
   if (!c || !cityKnown(c.id)) {
-    panel.innerHTML = "<div class='atlas-empty'><span class='ae-ico'>🌍</span><b>도시를 선택하세요</b>지도의 점을 누르거나 목록에서 고르면<br>도시 정보가 여기에 펼쳐집니다.</div>";
+    panel.innerHTML = "<div class='atlas-empty'><span class='ae-ico'>🌍</span><b>도시를 선택하세요</b>지도의 점을 누르거나 목록에서 고르면<br>도시 학습 대시보드가 여기에 펼쳐집니다.</div>";
     return;
   }
-  var tabs = [
-    { k: "overview", t: "개요" },
-    { k: "nature", t: "자연" },
-    { k: "human", t: "인문" },
-    { k: "story", t: "이야기" },
-    { k: "mission", t: "미션" }
-  ];
+  if (!atlas.tab || atlas.tab === "overview") atlas.tab = "nature";
   var stamped = stampHas(c.id);
   var related = (c.related || []).filter(function (id) { return cityKnown(id); });
   var relatedHTML = related.length
@@ -3901,18 +3868,21 @@ function renderAtlasPanel() {
       "<button type='button' class='chip atlas-compare-btn'>⚖ 비교하기</button></div>"
     : "<div class='atlas-related'><button type='button' class='chip atlas-compare-btn'>⚖ 도시 비교</button></div>";
   panel.innerHTML =
-    galleryHTML(c) +
     "<div class='atlas-title-row'><h3>" + c.flag + " " + esc(c.city) + "</h3>" +
       (stamped ? "<span class='atlas-stamp-mark'>스탬프 획득</span>" : "") + "</div>" +
     "<div class='atlas-meta'>" + esc(c.country) + " · " + esc(c.regionName) + " · " + fmtCoord(c) + "</div>" +
     relatedHTML +
-    "<div class='atlas-tabs'>" + tabs.map(function (tb) {
-      return "<button type='button' class='atlas-tab" + (atlas.tab === tb.k ? " is-on" : "") + "' data-tab='" + tb.k + "'>" + tb.t + "</button>";
-    }).join("") + "</div>" +
-    "<div class='atlas-tab-body'>" + atlasTabBody(c) + "</div>";
+    cityDashboardHTML(c, {
+      tab: atlas.tab,
+      extraTabs: [{ k: "mission", t: "미션" }]
+    });
 
-  mountAtlasGallery(c);
+  mountCityImages(panel);
   mountCityLocator(panel, c);
+  bindCityDashTabs(panel, c, {
+    tab: atlas.tab,
+    onTab: function (tab) { atlas.tab = tab; }
+  });
 
   $$(".atlas-related-btn", panel).forEach(function (b) {
     b.addEventListener("click", function () {
@@ -3922,39 +3892,6 @@ function renderAtlasPanel() {
   $$(".atlas-compare-btn", panel).forEach(function (b) {
     b.addEventListener("click", function () { openCompare([c.id]); });
   });
-
-  $$(".atlas-tab", panel).forEach(function (b) {
-    b.addEventListener("click", function () {
-      atlas.tab = b.getAttribute("data-tab");
-      Sound.play("click");
-      renderAtlasPanel();
-    });
-  });
-
-  if (atlas.tab === "mission") {
-    $$(".atlas-q", panel).forEach(function (box) {
-      var qi = parseInt(box.getAttribute("data-qi"), 10);
-      var q = c.quiz[qi];
-      $$(".choice", box).forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var ci = parseInt(btn.getAttribute("data-ci"), 10);
-          $$(".choice", box).forEach(function (x) { x.disabled = true; });
-          var fb = box.querySelector(".aq-fb");
-          if (ci === q.a) {
-            btn.classList.add("is-correct");
-            Sound.play("correct");
-            fb.innerHTML = "<div class='quiz-result good'><span class='rt'>정답입니다</span>" + esc(q.ex) + "</div>";
-            window.setTimeout(function () { onAtlasQuizCorrect(c, qi); }, 700);
-          } else {
-            btn.classList.add("is-wrong");
-            $$(".choice", box)[q.a].classList.add("is-correct");
-            Sound.play("wrong");
-            fb.innerHTML = "<div class='quiz-result bad'><span class='rt'>아쉬워요</span>" + esc(q.ex) + "</div>";
-          }
-        });
-      });
-    });
-  }
 }
 
 function grantAtlasStamp(c) {
@@ -4121,8 +4058,19 @@ function openPassport() {
 
 /* ---------------------------- 관리실 ---------------------------- */
 function openOffice() {
+  openModal({
+    eyebrow: "OFFICE",
+    title: "관리실",
+    size: "sheet",
+    body: "",
+    autofocus: false,
+    buttons: [{ label: "닫기", cls: "btn-light", act: function () { closeModal(); } }],
+    mount: function (body) {
+      var sheet = $("#office-sheet");
+      if (sheet) body.appendChild(sheet);
+    }
+  });
   renderOffice();
-  showScreen("screen-office", true);
 }
 function officeReadForm() {
   return {
@@ -4157,6 +4105,7 @@ function renderOffice() {
   if ($("#office-grade")) $("#office-grade").value = u.grade || "";
   if ($("#office-class")) $("#office-class").value = u.klass || "";
   renderOfficeRoleSeg();
+  syncAudioUI();
   var tools = $("#office-teacher-tools");
   if (tools) tools.hidden = u.role !== "teacher";
   var st = collectStats();
@@ -4261,39 +4210,101 @@ function openTeacherPinModal(onOk) {
       "<input type='password' id='teacher-pin-input' class='input' maxlength='12' placeholder='PIN 입력' autocomplete='off' inputmode='numeric'>",
     buttons: [
       { label: "취소", cls: "btn-light", act: function () { closeModal(); } },
-      { label: "확인", cls: "btn-navy", act: function () {
-        var input = $("#teacher-pin-input");
-        var pin = input ? input.value.trim() : "";
-        if (pin === teacherPinValue()) {
-          unlockTeacher();
-          closeModal();
-          onOk();
-        } else {
-          toast("PIN이 맞지 않습니다.", "bad");
-          if (input) { input.value = ""; input.focus(); }
-        }
+      { label: "확인", cls: "btn-navy", id: "teacher-pin-ok", act: function () {
+        submitTeacherPin(onOk);
       } }
     ]
   });
+  window.setTimeout(function () {
+    var input = $("#teacher-pin-input");
+    if (!input) return;
+    try { input.focus(); } catch (e) {}
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitTeacherPin(onOk);
+      }
+    });
+  }, 80);
 }
 
-function openStudentGuide() {
-  showScreen("screen-student-guide", true);
+function submitTeacherPin(onOk) {
+  var input = $("#teacher-pin-input");
+  var pin = input ? input.value.trim() : "";
+  if (pin === teacherPinValue()) {
+    unlockTeacher();
+    closeModal();
+    onOk();
+  } else {
+    toast("PIN이 맞지 않습니다.", "bad");
+    if (input) { input.value = ""; input.focus(); }
+  }
 }
-function openTeacherGuide() {
-  showScreen("screen-teacher-guide", true);
+
+function openStudentGuide() { openGuideModal("student"); }
+function openTeacherGuide() { openGuideModal("teacher"); }
+function openGuide() { openGuideModal("student"); }
+
+var guideTab = "student";
+function bindGuideSheet() {
+  var sheet = $("#guide-sheet");
+  if (!sheet || sheet.getAttribute("data-bound") === "1") return;
+  sheet.setAttribute("data-bound", "1");
+  sheet.addEventListener("click", function (e) {
+    var tab = e.target.closest("[data-guide-tab]");
+    if (!tab) return;
+    Sound.play("click");
+    setGuideTab(tab.getAttribute("data-guide-tab"));
+  });
 }
-function openGuide() { openStudentGuide(); }
+function setGuideTab(kind) {
+  guideTab = kind === "teacher" ? "teacher" : "student";
+  var student = $("#guide-pane-student");
+  var teacher = $("#guide-pane-teacher");
+  if (student) student.hidden = guideTab !== "student";
+  if (teacher) teacher.hidden = guideTab !== "teacher";
+  $$("[data-guide-tab]").forEach(function (b) {
+    var on = b.getAttribute("data-guide-tab") === guideTab;
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  var head = document.querySelector("#modal-root .modal.sheet .modal-head");
+  if (head) {
+    var eye = head.querySelector(".eyebrow");
+    var h3 = head.querySelector("h3");
+    if (eye) eye.textContent = guideTab === "teacher" ? "TEACHER GUIDE" : "STUDENT GUIDE";
+    if (h3) h3.textContent = guideTab === "teacher" ? "교사용 가이드" : "학생용 가이드";
+  }
+}
+function openGuideModal(kind) {
+  openModal({
+    eyebrow: kind === "teacher" ? "TEACHER GUIDE" : "STUDENT GUIDE",
+    title: kind === "teacher" ? "교사용 가이드" : "학생용 가이드",
+    size: "sheet",
+    body: "",
+    autofocus: false,
+    buttons: [{ label: "닫기", cls: "btn-light", act: function () { closeModal(); } }],
+    mount: function (body) {
+      var sheet = $("#guide-sheet");
+      if (sheet) body.appendChild(sheet);
+    }
+  });
+  bindGuideSheet();
+  setGuideTab(kind || "student");
+}
 
 function printTeacherGuide() {
-  if (!$("#screen-teacher-guide") || !$("#screen-teacher-guide").classList.contains("is-active")) {
-    showScreen("screen-teacher-guide");
-  }
+  var wasOpen = !!document.querySelector("#modal-root .modal.sheet #guide-sheet");
+  closeModal(true);
+  setGuideTab("teacher");
+  document.body.classList.add("is-print-guide");
   var prevTitle = document.title;
   document.title = "URBAN_TRAIL_프로그램_가이드";
   window.setTimeout(function () {
     window.print();
     document.title = prevTitle;
+    document.body.classList.remove("is-print-guide");
+    if (wasOpen) openGuideModal("teacher");
   }, 80);
 }
 
@@ -4363,7 +4374,7 @@ function renderTeacher() {
 
   wrap.appendChild(settingRow(
     "재도전 힌트 제공",
-    "재도전할 때 도시 카드의 핵심 키워드를 힌트로 보여 줍니다.",
+    "재도전할 때 도시 학습 대시보드의 핵심 키워드를 힌트로 보여 줍니다.",
     makeSwitch(settings.showHint, function (v) { settings.showHint = v; saveSettings(); })
   ));
 
@@ -4421,7 +4432,7 @@ function renderTeacher() {
   soundBox.style.gap = "10px";
   soundBox.appendChild(makeSeg([{ t: "효과음 켬", v: true }, { t: "끔", v: false }],
     settings.sfx, function (v) { settings.sfx = v; saveSettings(); syncAudioUI(); renderTeacher(); }));
-  wrap.appendChild(settingRow("효과음", "주사위·정답·스탬프 효과음을 켜고 끕니다.", soundBox));
+  wrap.appendChild(settingRow("효과음", "주사위·정답·스탬프 효과음을 켜고 끕니다. 음량은 관리실에서 조절합니다.", soundBox));
 
   /* 데이터 관리 */
   var dataBox = el("div", "");
@@ -4508,17 +4519,7 @@ function renderResultsScreen() {
   var ids = Object.keys(union).sort(function (a, b) { return union[b] - union[a]; });
   html += "<h3 class='sec-title' style='color:var(--navy-800)'>🌍 이 기기에서 모은 도시 (" + ids.length + "곳)</h3>";
   if (ids.length) {
-    html += "<div class='stamp-book'>";
-    ids.forEach(function (id) {
-      var c = getCity(id);
-      if (!c) return;
-      html += "<div class='stamp-page' style='--c:" + c.continentColor + "'>" +
-        "<div class='sp-i'>" + c.landmarkIcon + "</div>" +
-        "<div class='sp-c'>" + esc(c.city) + "</div>" +
-        "<div class='sp-l'>" + union[id] + "번 저장</div>" +
-        "<div class='sp-f'>" + c.flag + "</div></div>";
-    });
-    html += "</div>";
+    html += stampsGroupedHTML(ids, function (c) { return union[c.id] + "번 저장"; });
   }
 
   html += "<div class='report-actions no-print' style='justify-content:flex-start'>" +
@@ -4565,7 +4566,7 @@ var HOME_TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='nav-atlas']",
     title: "트레일 맵 (상단 메뉴)",
-    body: "어느 화면에서든 눌러 <b>트레일 맵</b>으로 이동합니다. 지도를 확대·이동하며 48개 도시 정보를 탐험할 수 있어요."
+    body: "어느 화면에서든 눌러 <b>트레일 맵</b>으로 이동합니다. 도시를 누르면 게임과 같은 <b>도시 학습 대시보드</b>로 자연·인문·이야기·미션을 학습할 수 있어요."
   },
   {
     target: "[data-tutorial='nav-play']",
@@ -4578,24 +4579,24 @@ var HOME_TUTORIAL_STEPS = [
     body: "게임·트레일 맵에서 모은 스탬프와 발견 기록을 확인합니다. 도시를 누르면 트레일 맵으로 이동합니다."
   },
   {
-    target: "[data-tutorial='guide-student']",
-    title: "학생용 가이드",
-    body: "주사위 굴리기, 도시 카드 읽기, 미션, 점수, PDF 제출 방법이 정리되어 있습니다."
+    target: "[data-tutorial='office']",
+    title: "관리실",
+    body: "이용자 정보와 효과음이 여기에 있습니다. 누르면 상세 창이 열리고, 수업 기기마다 따로 저장됩니다."
   },
   {
-    target: "[data-tutorial='guide-teacher']",
-    title: "교사용 가이드",
-    body: "수업에서 프로그램을 활용하는 방법, 학생 안내 말, 50분 흐름이 정리되어 있습니다."
+    target: "[data-tutorial='guide-hub']",
+    title: "가이드",
+    body: "학생용 가이드와 교사용 가이드가 한 창에 있습니다. 위쪽 탭에서 원하는 안내를 고르세요."
   },
   {
     target: "[data-tutorial='guide-tutorial']",
-    title: "화면 안내",
+    title: "튜토리얼",
     body: "이 버튼을 다시 누르면 지금처럼 주요 버튼을 하나씩 안내받을 수 있습니다."
   },
   {
     target: "[data-tutorial='route-explore']",
     title: "트레일 맵 카드",
-    body: "홈 화면에서도 트레일 맵으로 바로 갈 수 있습니다. 목록 보기·도시 비교·기후 그래프를 활용해 보세요."
+    body: "홈 화면에서도 트레일 맵으로 바로 갈 수 있습니다. 도시를 누르면 도시 학습 대시보드가 열리고, 목록 보기·도시 비교도 활용할 수 있어요."
   },
   {
     target: "[data-tutorial='route-play']",
@@ -4608,14 +4609,9 @@ var HOME_TUTORIAL_STEPS = [
     body: "스탬프와 발견 도시를 모아 둔 기록장입니다. 권역별로 얼마나 채웠는지 확인할 수 있습니다."
   },
   {
-    target: "[data-tutorial='sfx']",
-    title: "효과음 설정",
-    body: "주사위·버튼 클릭 등 효과음을 켜거나 끄고, 음량을 조절합니다. 배경음악은 사용하지 않습니다."
-  },
-  {
     target: null,
     title: "안내를 마쳤습니다",
-    body: "이제 원하는 버튼을 눌러 여행을 시작해 보세요. 다시 보고 싶으면 홈의 <b>💡 화면 안내</b>를 누르세요."
+    body: "이제 원하는 버튼을 눌러 여행을 시작해 보세요. 다시 보고 싶으면 홈의 <b>💡 튜토리얼</b>을 누르세요."
   }
 ];
 
@@ -4628,7 +4624,7 @@ var ATLAS_TUTORIAL_STEPS = [
   {
     target: "[data-tutorial='atlas-map']",
     title: "세계 지도",
-    body: "점을 누르면 도시 정보가 오른쪽에 열립니다. 확대·이동하며 위치를 확인해 보세요."
+    body: "점을 누르면 오른쪽에 도시 학습 대시보드가 열립니다. 확대·이동하며 위치를 확인해 보세요."
   },
   {
     target: "[data-tutorial='atlas-search']",
@@ -4642,13 +4638,13 @@ var ATLAS_TUTORIAL_STEPS = [
   },
   {
     target: "[data-tutorial='atlas-panel']",
-    title: "도시 정보 패널",
-    body: "선택한 도시의 사진·기후·산업·미션이 여기에 나타납니다. 랜드마크 사진도 함께 볼 수 있어요."
+    title: "도시 학습 대시보드",
+    body: "선택한 도시의 <b>도시 학습 대시보드</b>가 여기에 열립니다. 자연·인문·이야기 탭과 미션은 어반 런과 같습니다."
   },
   {
     target: null,
     title: "탐험을 시작해 보세요",
-    body: "지도의 점을 눌러 도시를 열어 보세요. 다시 보려면 홈의 <b>화면 안내</b>를 이용하세요."
+    body: "지도의 점을 눌러 도시를 열어 보세요. 다시 보려면 홈의 <b>튜토리얼</b>을 이용하세요."
   }
 ];
 
@@ -4766,6 +4762,7 @@ function startTutorial(force, kind) {
   kind = kind || "home";
   if (tutorialActive) return;
   if (!force && tutorialCompleted(kind)) return;
+  closeModal(true);
   tutorialKind = kind;
   TUTORIAL_STEPS = TUTORIAL_PACKS[kind] || HOME_TUTORIAL_STEPS;
   if (kind === "home") {
@@ -4799,7 +4796,7 @@ function tutorialGo(delta) {
   if (next < 0) return;
   if (next >= TUTORIAL_STEPS.length) {
     closeTutorial(true);
-    toast("화면 안내를 완료했습니다.", "good");
+    toast("튜토리얼을 완료했습니다.", "good");
     return;
   }
   tutorialStep = next;
@@ -4900,29 +4897,46 @@ function layoutTutorialStep() {
 
 /* 소리 UI 동기화 */
 function syncAudioUI() {
-  var ids = ["toggle-sfx-header"];
-  ids.forEach(function (id) {
-    var ts = document.getElementById(id);
-    if (ts) ts.checked = settings.sfx;
-  });
-  var volIds = ["vol-sfx-header"];
-  volIds.forEach(function (id) {
-    var vs = document.getElementById(id);
-    if (vs) { vs.value = settings.sfxVol; vs.disabled = !settings.sfx; }
-  });
+  var ts = document.getElementById("toggle-sfx-office");
+  if (ts) ts.checked = settings.sfx;
+  var vs = document.getElementById("vol-sfx-office");
+  if (vs) {
+    vs.value = settings.sfxVol;
+    vs.disabled = !settings.sfx;
+  }
+  var lab = document.getElementById("vol-sfx-value");
+  if (lab) lab.textContent = (settings.sfxVol | 0) + "%";
+  var test = document.getElementById("btn-sfx-test");
+  if (test) test.disabled = !settings.sfx;
 }
 
 function bindAudioUI() {
-  var ts = document.getElementById("toggle-sfx-header");
+  var ts = document.getElementById("toggle-sfx-office");
   if (ts) ts.addEventListener("change", function () {
     settings.sfx = ts.checked; saveSettings(); syncAudioUI();
-    Sound.unlock(); if (settings.sfx) Sound.play("click");
+    Sound.unlock();
+    if (settings.sfx) Sound.play("click");
   });
-  var vs = document.getElementById("vol-sfx-header");
-  if (vs) vs.addEventListener("input", function () {
-    settings.sfxVol = parseInt(vs.value, 10); saveSettings();
+  var vs = document.getElementById("vol-sfx-office");
+  if (vs) {
+    vs.addEventListener("input", function () {
+      settings.sfxVol = parseInt(vs.value, 10); saveSettings(); syncAudioUI();
+    });
+    vs.addEventListener("change", function () {
+      Sound.unlock();
+      if (settings.sfx) Sound.play("click");
+    });
+  }
+  var test = document.getElementById("btn-sfx-test");
+  if (test) test.addEventListener("click", function () {
+    Sound.unlock();
+    if (!settings.sfx) {
+      toast("효과음이 꺼져 있습니다. 먼저 켜 주세요.", "");
+      return;
+    }
+    Sound.play("dice");
+    window.setTimeout(function () { Sound.play("reward"); }, 280);
   });
-  if (vs) vs.addEventListener("change", function () { Sound.unlock(); Sound.play("click"); });
 }
 
 /* data-act 속성 기반 이벤트 위임 */
@@ -4980,8 +4994,8 @@ var ACTIONS = {
   "open-student-guide": function () { Sound.unlock(); openStudentGuide(); },
   "open-teacher-guide": function () { Sound.unlock(); openTeacherGuide(); },
   "print-teacher-guide": function () { Sound.unlock(); printTeacherGuide(); },
-  "open-teacher": function () { Sound.unlock(); openTeacher(); },
-  "open-results": function () { Sound.unlock(); openResults(); },
+  "open-teacher": function () { Sound.unlock(); requireTeacherAccess(openTeacher); },
+  "open-results": function () { Sound.unlock(); requireTeacherAccess(openResults); },
   "go-back": function () { backScreen("screen-title"); },
   "open-office": function () { Sound.unlock(); openOffice(); },
   "office-save": function () { Sound.unlock(); saveOfficeForm(); },
@@ -4999,7 +5013,10 @@ var ACTIONS = {
       function () { resetAllDeviceData(); }, "초기화");
   },
   "go-title": function () {
-    if ($("#screen-title") && $("#screen-title").classList.contains("is-active")) return;
+    if ($("#screen-title") && $("#screen-title").classList.contains("is-active")) {
+      closeModal();
+      return;
+    }
     if (isGameInProgress()) {
       confirmLeaveGame(function () {
         saveGame();
@@ -5016,7 +5033,7 @@ var ACTIONS = {
   "tutorial-skip": function () {
     Sound.play("click");
     closeTutorial(true);
-    toast("화면 안내를 건너뛰었습니다.", "");
+    toast("튜토리얼을 건너뛰었습니다.", "");
   },
 
   "setup-next": function () {
@@ -5115,7 +5132,9 @@ function init() {
   hydrateStamps();
   syncAudioUI();
   bindAudioUI();
+  bindGuideSheet();
   bindActions();
+  window.addEventListener("beforeprint", syncPrintAnswers);
   ensureDiceCube();
   drawDice(1, { instant: true });
   clearSaveFlagRefresh();
@@ -5166,7 +5185,7 @@ function init() {
     if (tutorialActive) {
       if (e.key === "Escape") {
         closeTutorial(true);
-        toast("화면 안내를 건너뛰었습니다.", "");
+        toast("튜토리얼을 건너뛰었습니다.", "");
         return;
       }
       if (e.key === "Enter" || e.key === "ArrowRight") {
