@@ -2037,44 +2037,44 @@ body.is-tutorial-active { overflow: hidden; }
 .seg.on-dark button.is-on { background: var(--gold-500); color: #fff; }
 
 /* ---- 월드 아틀라스 ---- */
-#screen-atlas.is-active {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100dvh - 5.25rem);
-}
+/* 페이지·카드 폭은 GAME SETUP(여행 준비하기)와 동일하게 .page / .panel 을 따른다. */
 .atlas-page {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  padding: 14px clamp(12px, 2vw, 24px) 18px;
-  max-width: none;
-  width: 100%;
-  margin: 0 auto;
-}
-.atlas-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
 }
 .atlas-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .atlas-tools .input { background: rgba(255,255,255,.92); }
+.atlas-tools .sort-lbl { color: var(--ink-500); }
+.atlas-tools .sort-btn {
+  border-color: var(--cream-300);
+  background: var(--cream-100);
+  color: var(--ink-700);
+}
+.atlas-tools .sort-btn.is-on {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+  color: #fff;
+}
 
 .atlas-workspace {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  width: 100%;
 }
 .atlas-stage {
-  flex: 1 1 auto;
+  width: 100%;
+  aspect-ratio: 1000 / 520;
   min-width: 0;
-  min-height: min(68vh, 720px);
+  min-height: 280px;
   background: var(--map-ocean);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow);
   border: 1.5px solid var(--cream-300);
   overflow: hidden;
   position: relative;
+}
+.atlas-stage.is-list {
+  aspect-ratio: auto;
+  min-height: 420px;
+  background: var(--cream-100);
 }
 .atlas-map-wrap, .atlas-list-wrap {
   position: absolute; inset: 0;
@@ -2090,7 +2090,12 @@ body.is-tutorial-active { overflow: hidden; }
 }
 .atlas-map-wrap { cursor: grab; touch-action: none; user-select: none; }
 .atlas-map-wrap.is-panning { cursor: grabbing; }
-#atlas-map { width: 100%; height: 100%; display: block; background: var(--map-ocean); }
+#atlas-map {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--map-ocean);
+}
 .atlas-hs { cursor: pointer; }
 .atlas-hs:focus { outline: none; }
 .atlas-hs-hit { fill: transparent; stroke: none; }
@@ -2473,10 +2478,6 @@ body.is-tutorial-active { overflow: hidden; }
 .tile.is-stamped .tile-photo { opacity: .55; }
 .tile-flag, .tile-name, .tile-icon, .tile-sub { position: relative; z-index: 1; }
 .tile-stamp { z-index: 2; }
-
-@media (max-width: 960px) {
-  .atlas-stage { min-height: 52vh; }
-}
 
 /* 설정 리스트 */
 .set-list { display: flex; flex-direction: column; gap: 2px; }

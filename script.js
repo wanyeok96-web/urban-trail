@@ -3501,8 +3501,10 @@ function renderAtlasChrome() {
 
 function renderAtlasView() {
   var mapW = $("#atlas-map-wrap"), listW = $("#atlas-list-wrap");
+  var stage = $(".atlas-stage");
   if (mapW) mapW.hidden = atlas.view !== "map";
   if (listW) listW.hidden = atlas.view !== "list";
+  if (stage) stage.classList.toggle("is-list", atlas.view === "list");
   if (atlas.view === "map") renderAtlasMap();
   else renderAtlasList();
 }
