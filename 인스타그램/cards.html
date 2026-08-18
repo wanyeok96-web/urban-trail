@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>URBAN TRAIL · Instagram · Geopus</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --navy: #111827;
+    --navy-800: #1f2937;
+    --blue: #2563eb;
+    --blue-400: #3b82f6;
+    --blue-200: #93c5fd;
+    --white: #ffffff;
+    --cream: #f3f5f8;
+    --ink: #111827;
+    --muted: #64748b;
+    --ea: #e05a5a;
+    --sa: #e0913a;
+    --eu: #4d7fd6;
+    --af: #35a877;
+    --na: #8b6ad6;
+    --so: #21a7ae;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0b1220; }
+  body {
+    font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  html.export, html.export body {
+    width: 1080px; height: 1350px; overflow: hidden; background: #111827;
+  }
+  body.preview {
+    padding: 40px 0 80px;
+    display: flex; flex-direction: column; align-items: center; gap: 36px;
+  }
+  .card {
+    width: 1080px; height: 1350px;
+    position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  body.export .card { display: none; }
+  body.export .card.is-on { display: block; }
+
+  .top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 52px 64px 0;
+    letter-spacing: .14em; font-size: 22px; font-weight: 700;
+    position: relative; z-index: 3;
+  }
+  .dark .top { color: rgba(255,255,255,.55); }
+  .light .top { color: #94a3b8; }
+  .pager { letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+
+  .foot {
+    position: absolute; left: 64px; right: 64px; bottom: 48px;
+    display: flex; align-items: center; gap: 14px; z-index: 3;
+  }
+  .foot-name { font-size: 20px; font-weight: 700; letter-spacing: .12em; }
+  .dark .foot-name { color: rgba(255,255,255,.4); }
+  .light .foot-name { color: #94a3b8; }
+  .metro { display: flex; gap: 8px; margin-left: auto; }
+  .metro i { width: 56px; height: 8px; border-radius: 99px; display: block; }
+  .metro i:nth-child(1) { background: var(--ea); }
+  .metro i:nth-child(2) { background: var(--sa); }
+  .metro i:nth-child(3) { background: var(--eu); }
+  .metro i:nth-child(4) { background: var(--af); }
+  .metro i:nth-child(5) { background: var(--na); }
+  .metro i:nth-child(6) { background: var(--so); }
+
+  .dark { background: var(--navy); color: #fff; }
+  .light { background: var(--cream); color: var(--ink); }
+  .body { padding: 40px 64px 0; position: relative; z-index: 2; }
+  h1 { font-weight: 800; letter-spacing: -0.04em; line-height: 1.12; }
+  .eyebrow {
+    font-size: 26px; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; margin-bottom: 24px;
+  }
+  .dark .eyebrow { color: var(--blue-200); }
+  .light .eyebrow { color: var(--blue); }
+  .lede { font-size: 32px; font-weight: 600; line-height: 1.45; margin-top: 28px; }
+  .dark .lede { color: rgba(255,255,255,.72); }
+  .light .lede { color: var(--navy-800); }
+
+  .map-deco { position: absolute; inset: 0; pointer-events: none; }
+
+  .mascot {
+    position: absolute; z-index: 4; pointer-events: none;
+    filter: drop-shadow(0 18px 24px rgba(17,24,39,.18));
+  }
+  .mascot img { width: 100%; height: auto; display: block; }
+  .mascot-lg { width: 420px; right: 8px; bottom: 70px; }
+  .mascot-md { width: 340px; right: 12px; bottom: 78px; }
+  .mascot-sm { width: 280px; right: 16px; bottom: 82px; }
+  .say {
+    position: absolute; z-index: 5;
+    background: #fff; color: var(--navy);
+    border-radius: 22px; padding: 16px 22px;
+    font-size: 24px; font-weight: 800; letter-spacing: -0.03em;
+    box-shadow: 0 10px 28px rgba(17,24,39,.16);
+  }
+  .say::after {
+    content: ""; position: absolute; width: 18px; height: 18px;
+    background: #fff; transform: rotate(45deg);
+  }
+  .say-c1 { right: 300px; bottom: 430px; }
+  .say-c1::after { right: 36px; bottom: -8px; }
+  .say-c8 { right: 290px; bottom: 430px; }
+  .say-c8::after { right: 40px; bottom: -8px; }
+
+  .c1 h1 { font-size: 86px; max-width: 640px; }
+  .c1 .brand {
+    margin-top: 28px; font-size: 34px; font-weight: 800;
+    letter-spacing: .18em; color: var(--blue-400);
+  }
+  .chips { display: flex; gap: 12px; margin-top: 36px; flex-wrap: wrap; max-width: 620px; }
+  .chip {
+    border: 2px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.06);
+    color: #fff; padding: 12px 20px; border-radius: 999px;
+    font-size: 24px; font-weight: 700;
+  }
+
+  .c2 h1 { font-size: 70px; max-width: 700px; }
+  .points { margin-top: 40px; display: grid; gap: 18px; width: 680px; }
+  .point {
+    background: #fff; border-radius: 26px; padding: 28px 32px;
+    display: flex; align-items: center; gap: 24px;
+    box-shadow: 0 8px 30px rgba(17,24,39,.05);
+  }
+  .point .n {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 24px; flex-shrink: 0;
+  }
+  .point b { font-size: 32px; font-weight: 800; display: block; letter-spacing: -0.03em; }
+  .point span { font-size: 22px; color: var(--muted); font-weight: 600; margin-top: 4px; display: block; }
+
+  .c3 h1 { font-size: 64px; }
+  .routes { margin-top: 36px; display: grid; gap: 18px; width: 720px; }
+  .route {
+    background: #fff; border-radius: 28px; padding: 30px 34px;
+    display: grid; grid-template-columns: 84px 1fr; gap: 6px 22px; align-items: center;
+    box-shadow: 0 8px 30px rgba(17,24,39,.05);
+    border-left: 12px solid var(--blue);
+  }
+  .route:nth-child(1) { border-left-color: var(--eu); }
+  .route:nth-child(2) { border-left-color: var(--sa); }
+  .route:nth-child(3) { border-left-color: var(--af); }
+  .route .ico {
+    grid-row: span 3; width: 84px; height: 84px; border-radius: 24px;
+    display: grid; place-items: center; font-size: 42px; background: var(--cream);
+  }
+  .route .k { font-size: 18px; font-weight: 800; letter-spacing: .16em; color: var(--blue); }
+  .route .t { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; }
+  .route .s { font-size: 24px; color: var(--muted); font-weight: 600; }
+
+  .c4 h1 { font-size: 64px; max-width: 640px; }
+  .line { margin-top: 36px; position: relative; padding-left: 36px; width: 700px; }
+  .line::before {
+    content: ""; position: absolute; left: 17px; top: 18px; bottom: 18px;
+    width: 8px; border-radius: 99px;
+    background: linear-gradient(180deg, var(--ea), var(--sa), var(--eu), var(--af), var(--na));
+  }
+  .stop {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    background: #fff; border-radius: 22px;
+    padding: 24px 28px 24px 44px; margin-bottom: 14px; position: relative;
+    box-shadow: 0 6px 24px rgba(17,24,39,.05);
+  }
+  .stop::before {
+    content: ""; position: absolute; left: -27px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    border: 7px solid var(--blue); box-shadow: 0 0 0 4px var(--cream);
+  }
+  .stop:nth-child(1)::before { border-color: var(--ea); }
+  .stop:nth-child(2)::before { border-color: var(--sa); }
+  .stop:nth-child(3)::before { border-color: var(--eu); }
+  .stop:nth-child(4)::before { border-color: var(--af); }
+  .stop:nth-child(5)::before { border-color: var(--na); }
+  .stop b { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+  .stop em { font-style: normal; font-size: 20px; font-weight: 800; letter-spacing: .12em; color: var(--muted); }
+
+  .c5 h1 { font-size: 64px; }
+  .grid2 { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 720px; }
+  .tile {
+    background: #fff; border-radius: 26px; padding: 30px 28px; min-height: 200px;
+    box-shadow: 0 8px 30px rgba(17,24,39,.05);
+  }
+  .tile .k { font-size: 20px; font-weight: 800; letter-spacing: .14em; color: var(--blue); margin-bottom: 12px; }
+  .tile .t { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25; }
+  .tile .s { font-size: 22px; color: var(--muted); font-weight: 600; margin-top: 8px; line-height: 1.4; }
+
+  .c6 h1 { font-size: 64px; max-width: 640px; }
+  .dash {
+    margin-top: 32px; background: #fff; border-radius: 32px; padding: 34px 34px 28px;
+    box-shadow: 0 8px 30px rgba(17,24,39,.06); width: 700px;
+  }
+  .dash-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 22px; }
+  .dash-head b { font-size: 34px; font-weight: 800; }
+  .dash-head span { font-size: 20px; font-weight: 700; color: var(--muted); letter-spacing: .08em; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .fact { background: var(--cream); border-radius: 18px; padding: 20px 18px; }
+  .fact small { display: block; font-size: 18px; font-weight: 800; color: var(--blue); letter-spacing: .1em; margin-bottom: 6px; }
+  .fact b { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; }
+  .c6 .note { margin-top: 24px; font-size: 28px; font-weight: 700; line-height: 1.45; color: var(--navy-800); max-width: 700px; }
+
+  .c7 h1 { font-size: 62px; max-width: 640px; }
+  .nums { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 680px; }
+  .num {
+    background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.1);
+    border-radius: 28px; padding: 32px 28px 28px; min-height: 250px;
+  }
+  .num strong { display: block; font-size: 96px; font-weight: 800; letter-spacing: -0.06em; line-height: 1; }
+  .num span { display: block; margin-top: 12px; font-size: 28px; font-weight: 700; color: rgba(255,255,255,.62); }
+
+  .c8 h1 { font-size: 76px; max-width: 640px; }
+  .cta-box {
+    margin-top: 36px; background: #fff; color: var(--navy);
+    border-radius: 32px; padding: 36px 34px; width: 680px;
+  }
+  .cta-box .label { font-size: 20px; font-weight: 800; letter-spacing: .16em; color: var(--blue); margin-bottom: 10px; }
+  .cta-box .url { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.35; word-break: break-all; }
+  .cta-box .hint { margin-top: 12px; font-size: 22px; font-weight: 600; color: var(--muted); }
+  .c8 .by { margin-top: 28px; font-size: 24px; font-weight: 600; color: rgba(255,255,255,.55); line-height: 1.5; }
+</style>
+</head>
+<body class="preview">
+
+<article class="card dark c1" data-card="1">
+  <svg class="map-deco" viewBox="0 0 1080 1350" aria-hidden="true">
+    <path d="M-40 980 C 200 860, 320 1100, 560 980 S 900 820, 1180 940" fill="none" stroke="#e05a5a" stroke-width="14" opacity=".35"/>
+    <path d="M-20 1080 C 240 980, 400 1220, 680 1080 S 980 940, 1200 1080" fill="none" stroke="#2563eb" stroke-width="14" opacity=".45"/>
+    <path d="M-40 1180 C 180 1280, 460 1120, 720 1220 S 1000 1300, 1180 1180" fill="none" stroke="#35a877" stroke-width="14" opacity=".3"/>
+    <circle cx="280" cy="1008" r="16" fill="#e05a5a"/>
+    <circle cx="560" cy="980" r="16" fill="#e05a5a"/>
+    <circle cx="420" cy="1096" r="18" fill="#3b82f6"/>
+    <circle cx="680" cy="1080" r="16" fill="#3b82f6"/>
+  </svg>
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">01 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">Geography Board Game</p>
+    <h1>지리 시간에<br>주사위를<br>굴리면?</h1>
+    <p class="brand">METRO ATLAS</p>
+    <p class="lede">지오퍼스가 안내하는<br>48개 도시 지리 여행.</p>
+    <div class="chips">
+      <span class="chip">48개 도시</span>
+      <span class="chip">6개 권역</span>
+      <span class="chip">수업 한 시간</span>
+    </div>
+  </div>
+  <div class="say say-c1">같이 타요!</div>
+  <div class="mascot mascot-lg"><img src="지오퍼스/globe.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">GUIDE · GEOPUS</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card light c2" data-card="2">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">02 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">What it is</p>
+    <h1>교과서가 아니라<br>노선입니다</h1>
+    <p class="lede">수업용 지리 보드게임 URBAN TRAIL.<br>설치도, 로그인도 없이 브라우저만 열면 출발합니다.</p>
+    <div class="points">
+      <div class="point"><div class="n">01</div><div><b>세계 48개 도시</b><span>6개 권역 노선으로 연결</span></div></div>
+      <div class="point"><div class="n">02</div><div><b>주사위 한 번 = 한 도시</b><span>도착하면 학습 대시보드가 열립니다</span></div></div>
+      <div class="point"><div class="n">03</div><div><b>스탬프로 남는 여행</b><span>트레일 로그에 기록이 쌓입니다</span></div></div>
+    </div>
+  </div>
+  <div class="mascot mascot-md"><img src="지오퍼스/aha.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">METRO ATLAS</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card light c3" data-card="3">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">03 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">Three routes</p>
+    <h1>탐험 · 플레이 · 기록<br>세 가지 길</h1>
+    <div class="routes">
+      <div class="route">
+        <div class="ico">🗺️</div>
+        <div class="k">EXPLORE</div>
+        <div class="t">트레일 맵</div>
+        <div class="s">48개 도시를 지도에서 찾고 비교합니다</div>
+      </div>
+      <div class="route">
+        <div class="ico">🎲</div>
+        <div class="k">PLAY</div>
+        <div class="t">어반 런</div>
+        <div class="s">주사위를 굴려 랜드마크 스탬프를 모읍니다</div>
+      </div>
+      <div class="route">
+        <div class="ico">📍</div>
+        <div class="k">COLLECT</div>
+        <div class="t">트레일 로그</div>
+        <div class="s">발견한 도시와 스탬프가 여권처럼 남습니다</div>
+      </div>
+    </div>
+  </div>
+  <div class="mascot mascot-sm"><img src="지오퍼스/wave.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">CHOOSE YOUR ROUTE</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card light c4" data-card="4">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">04 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">How a turn works</p>
+    <h1>한 칸 이동이<br>한 번의 수업</h1>
+    <div class="line">
+      <div class="stop"><b>주사위를 굴린다</b><em>ROLL</em></div>
+      <div class="stop"><b>도시에 도착한다</b><em>ARRIVE</em></div>
+      <div class="stop"><b>학습 대시보드를 읽는다</b><em>READ</em></div>
+      <div class="stop"><b>랜드마크 미션을 푼다</b><em>MISSION</em></div>
+      <div class="stop"><b>스탬프를 찍는다</b><em>STAMP</em></div>
+    </div>
+  </div>
+  <div class="mascot mascot-md"><img src="지오퍼스/dice.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">URBAN RUN</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card light c5" data-card="5">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">05 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">Built for class</p>
+    <h1>50분 수업에<br>맞춰 설계</h1>
+    <div class="grid2">
+      <div class="tile">
+        <div class="k">TEAM</div>
+        <div class="t">태블릿 1대<br>= 1팀</div>
+        <div class="s">모둠이 돌아가며 주사위를 굴립니다</div>
+      </div>
+      <div class="tile">
+        <div class="k">SETUP</div>
+        <div class="t">로그인 없이<br>바로 시작</div>
+        <div class="s">설치도 계정 만들기도 없습니다</div>
+      </div>
+      <div class="tile">
+        <div class="k">TIME</div>
+        <div class="t">턴 수로<br>길이 조절</div>
+        <div class="s">빠른 탐험 8턴 · 기본 15턴</div>
+      </div>
+      <div class="tile">
+        <div class="k">SUBMIT</div>
+        <div class="t">제출용 PDF<br>한 번에</div>
+        <div class="s">성찰까지 담아 선생님께 제출</div>
+      </div>
+    </div>
+  </div>
+  <div class="mascot mascot-sm"><img src="지오퍼스/thumbsup.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">FOR THE CLASSROOM</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card light c6" data-card="6">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">06 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">What you learn</p>
+    <h1>암기 대신<br>위치를 그립니다</h1>
+    <div class="dash">
+      <div class="dash-head">
+        <b>도시 학습 대시보드</b>
+        <span>CITY BRIEF</span>
+      </div>
+      <div class="facts">
+        <div class="fact"><small>LOCATION</small><b>어디인지 찍고</b></div>
+        <div class="fact"><small>CLIMATE</small><b>기후를 읽고</b></div>
+        <div class="fact"><small>INDUSTRY</small><b>산업을 보고</b></div>
+        <div class="fact"><small>LANDMARK</small><b>랜드마크를 맞힌다</b></div>
+      </div>
+    </div>
+    <p class="note">최대 3개 도시를 나란히 비교할 수 있어, “왜 여기일까?”를 수업에서 바로 묻게 됩니다.</p>
+  </div>
+  <div class="mascot mascot-md"><img src="지오퍼스/globe.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">LEARNING DASHBOARD</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card dark c7" data-card="7">
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">07 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">Start today</p>
+    <h1>오늘 당장<br>열 수 있습니다</h1>
+    <div class="nums">
+      <div class="num"><strong>48</strong><span>탐험할 도시</span></div>
+      <div class="num"><strong>6</strong><span>권역 노선</span></div>
+      <div class="num"><strong>24</strong><span>모을 스탬프</span></div>
+      <div class="num"><strong>0</strong><span>만들 계정 수</span></div>
+    </div>
+  </div>
+  <div class="mascot mascot-lg"><img src="지오퍼스/cheer.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">NO LOGIN · NO INSTALL</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<article class="card dark c8" data-card="8">
+  <svg class="map-deco" viewBox="0 0 1080 1350" aria-hidden="true">
+    <path d="M-40 1080 C 240 960, 420 1240, 700 1100 S 1000 980, 1200 1120" fill="none" stroke="#2563eb" stroke-width="14" opacity=".4"/>
+    <circle cx="280" cy="1028" r="16" fill="#3b82f6"/>
+    <circle cx="700" cy="1100" r="16" fill="#3b82f6"/>
+  </svg>
+  <div class="top"><span>URBAN TRAIL</span><span class="pager">08 / 08</span></div>
+  <div class="body">
+    <p class="eyebrow">Your stop</p>
+    <h1>지금 바로<br>타보세요</h1>
+    <p class="lede">링크를 누르면 브라우저에서 바로 열립니다.<br>수업 전 미리 한 바퀴, 오늘 바로 한 시간.</p>
+    <div class="cta-box">
+      <div class="label">OPEN IN BROWSER</div>
+      <div class="url">wanyeok96-web.github.io<br>/urban-trail</div>
+      <div class="hint">Chrome 또는 Edge에서 열어 주세요</div>
+    </div>
+    <p class="by">경기 이솔고등학교 교사 이왕혁<br>안내 캐릭터 지오퍼스 · URBAN TRAIL</p>
+  </div>
+  <div class="say say-c8">여기서 타요!</div>
+  <div class="mascot mascot-lg"><img src="지오퍼스/wave.png" alt="지오퍼스"></div>
+  <div class="foot">
+    <span class="foot-name">SEE YOU ON THE TRAIL</span>
+    <div class="metro"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</article>
+
+<script>
+  const n = new URLSearchParams(location.search).get("card");
+  if (n) {
+    document.documentElement.className = "export";
+    document.body.className = "export";
+    document.querySelectorAll(".card").forEach((el) => {
+      el.classList.toggle("is-on", el.dataset.card === n);
+    });
+  }
+</script>
+</body>
+</html>
